@@ -165,9 +165,7 @@ export const suppliers = pgTable("suppliers", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
 export const purchaseReceipts = pgTable("purchase_receipts", {
@@ -1168,20 +1166,16 @@ export type InsertPaymentMethod = typeof paymentMethods.$inferInsert;
 // Price Lists table
 export const priceLists = pgTable("price_lists", {
   id: serial("id").primaryKey(),
-  code: varchar("code", { length: 50 }).notNull().unique(),
-  name: varchar("name", { length: 255 }).notNull(),
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
   description: text("description"),
-  isActive: boolean("is_active").notNull().default(true),
-  isDefault: boolean("is_default").notNull().default(false),
-  storeCode: varchar("store_code", { length: 50 }),
+  storeCode: text("store_code"),
+  isActive: boolean("is_active").default(true),
+  isDefault: boolean("is_default").default(false),
   validFrom: timestamp("valid_from", { withTimezone: true }),
   validTo: timestamp("valid_to", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
 // Price List Items table

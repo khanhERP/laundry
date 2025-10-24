@@ -395,12 +395,16 @@ export default function PurchasesPage({ onLogout }: PurchasesPageProps) {
                       onChange={(e) => setStoreFilter(e.target.value)}
                       className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                     >
-                      <option value="all">{t("purchases.allStores")}</option>
-                      {storesData.map((store: any) => (
-                        <option key={store.id} value={store.storeCode}>
-                          {store.storeName}
-                        </option>
-                      ))}
+                      {storesData.filter((store: any) => store.typeUser !== 1).length > 1 && (
+                        <option value="all">{t("common.all")}</option>
+                      )}
+                      {storesData
+                        .filter((store: any) => store.typeUser !== 1)
+                        .map((store: any) => (
+                          <option key={store.id} value={store.storeCode}>
+                            {store.storeName}
+                          </option>
+                        ))}
                     </select>
                   </div>
 
@@ -792,7 +796,7 @@ export default function PurchasesPage({ onLogout }: PurchasesPageProps) {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 overflow-hidden">
           <div className="overflow-y-auto max-h-[95vh]">
-            <PurchaseFormPage 
+            <PurchaseFormPage
               onLogout={onLogout}
               hideBackButton={true}
               onSuccess={() => {
@@ -814,16 +818,20 @@ export default function PurchasesPage({ onLogout }: PurchasesPageProps) {
           setEditingPurchaseId(null);
         }
       }}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 overflow-hidden">
-          <div className="overflow-y-auto max-h-[95vh]">
+        <DialogContent className="max-w-[98vw] max-h-[98vh] p-0 overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{t("purchases.viewPurchaseOrder")}</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[98vh] w-full">
             {editingPurchaseId && (
-              <PurchaseViewPage 
+              <PurchaseViewPage
                 onLogout={onLogout}
                 hideBackButton={true}
                 purchaseId={editingPurchaseId}
                 onSuccess={() => {
                   setShowEditDialog(false);
                   setEditingPurchaseId(null);
+                  queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/purchase-receipts"] });
                   toast({
                     title: t("common.success"),
                     description: "Phiếu nhập hàng đã được cập nhật thành công",

@@ -79,14 +79,14 @@ export function TableReport() {
         }
         const data = await response.json();
         console.log("Table Report - Orders loaded:", data?.length || 0);
-        
+
         // Filter by store if not "all"
         let filteredData = Array.isArray(data) ? data : [];
         if (storeFilter !== "all") {
           filteredData = filteredData.filter((order: any) => order.storeCode === storeFilter);
           console.log(`Table Report - Filtered to ${filteredData.length} orders for store ${storeFilter}`);
         }
-        
+
         return filteredData;
       } catch (error) {
         console.error("Table Report - Error fetching orders:", error);
@@ -596,7 +596,9 @@ export function TableReport() {
                     <SelectValue placeholder={t("common.allStores")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">{t("common.allStores")}</SelectItem>
+                    {storesData.filter((store: any) => store.typeUser !== 1).length > 1 && (
+                      <SelectItem value="all">Tất cả</SelectItem>
+                    )}
                     {storesData
                       .filter((store: any) => store.typeUser !== 1)
                       .map((store: any) => (

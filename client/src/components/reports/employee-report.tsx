@@ -569,7 +569,9 @@ export function EmployeeReport() {
                     <SelectValue placeholder={t("reports.seller")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">{t("common.all")}</SelectItem>
+                    {employees && Array.isArray(employees) && employees.length > 1 && (
+                      <SelectItem value="all">{t("common.all")}</SelectItem>
+                    )}
                     {employees &&
                       Array.isArray(employees) &&
                       employees.map((employee: any) => (
@@ -672,7 +674,9 @@ export function EmployeeReport() {
                     <SelectValue placeholder={t("reports.seller")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">{t("common.all")}</SelectItem>
+                    {employees && Array.isArray(employees) && employees.length > 1 && (
+                      <SelectItem value="all">{t("common.all")}</SelectItem>
+                    )}
                     {employees &&
                       Array.isArray(employees) &&
                       employees.map((employee: any) => (

@@ -92,13 +92,13 @@ export function SalesReport() {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        
+
         // Filter by store if not "all"
         let filteredData = Array.isArray(data) ? data : [];
         if (storeFilter !== "all") {
           filteredData = filteredData.filter((order: any) => order.storeCode === storeFilter);
         }
-        
+
         return filteredData;
       } catch (error) {
         console.error("Error fetching orders:", error);
@@ -594,9 +594,11 @@ export function SalesReport() {
                 <select
                   value={storeFilter}
                   onChange={(e) => setStoreFilter(e.target.value)}
-                  className="h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer"
                 >
-                  <option value="all">Tất cả</option>
+                  {storesData.filter((store: any) => store.typeUser !== 1).length > 1 && (
+                    <option value="all">Tất cả</option>
+                  )}
                   {storesData
                     .filter((store: any) => store.typeUser !== 1)
                     .map((store: any) => (
@@ -606,7 +608,7 @@ export function SalesReport() {
                     ))}
                 </select>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Filter className="w-4 h-4 text-gray-500" />
                 <Select value={dateRange} onValueChange={handleDateRangeChange}>

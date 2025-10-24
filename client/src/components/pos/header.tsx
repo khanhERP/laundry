@@ -765,7 +765,7 @@ export function POSHeader({ onLogout }: POSHeaderProps) {
               >
                 <User className="w-4 h-4 mr-1.5" />
                 <span className="hidden sm:inline">
-                  {currentCashier ? currentCashier.name : "Admin"}
+                  {currentCashier ? currentCashier.name : (storeSettings?.storeCode || "Admin")}
                 </span>
                 <ChevronDown
                   className={`w-3 h-3 ml-1 transition-transform ${userMenuOpen ? "rotate-180" : ""}`}

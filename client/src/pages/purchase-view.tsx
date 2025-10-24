@@ -1170,8 +1170,8 @@ export default function PurchaseViewPage({ onLogout, onSuccess, hideBackButton =
 
       <div className="container mx-auto px-4 pt-24 pb-6 max-w-7xl">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-          <div className="flex items-center gap-4">
+        <div className="mb-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+          <div className="flex items-center gap-4 mb-2">
             {!hideBackButton && (
               <Button
                 variant="ghost"
@@ -1183,14 +1183,14 @@ export default function PurchaseViewPage({ onLogout, onSuccess, hideBackButton =
                 {t("common.back")}
               </Button>
             )}
-            <div className="space-y-1">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
-                {t("purchases.viewPurchaseOrder")}
-              </h1>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                {t("purchases.viewOrderDescription")}
-              </p>
-            </div>
+          </div>
+          <div className="space-y-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
+              {t("purchases.viewPurchaseOrder")}
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+              {t("purchases.viewOrderDescription")}
+            </p>
           </div>
         </div>
 
@@ -1206,257 +1206,238 @@ export default function PurchaseViewPage({ onLogout, onSuccess, hideBackButton =
                 {t("purchases.orderDetailsDescription")}
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                      {/* Supplier */}
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium">
-                          {t("purchases.supplier")} <span className="text-red-500">*</span>
-                        </label>
-                        <Select 
-                          disabled={!isEditMode} 
-                          value={formData.supplierId}
-                          onValueChange={(value) => setFormData(prev => ({ ...prev, supplierId: value }))}
-                        >
-                          <SelectTrigger className="h-9 sm:h-10">
-                            <SelectValue placeholder={getSupplierName(parseInt(formData.supplierId))} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {suppliers.map((supplier: any) => (
-                              <SelectItem key={supplier.id} value={supplier.id.toString()}>
-                                {supplier.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Store Selection */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium flex items-center gap-1">
+                    <span>{t("purchases.storeLabel")}</span>
+                    <span className="text-red-500">*</span>
+                  </label>
+                  {isEditMode ? (
+                    <Select 
+                      disabled={!isEditMode} 
+                      value={formData.storeCode || purchaseOrder?.storeCode}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, storeCode: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("purchases.allStores")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {storesData?.map((store: any) => (
+                          <SelectItem key={store.id} value={store.storeCode}>
+                            {store.storeName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={storesData?.find((s: any) => s.storeCode === (formData.storeCode || purchaseOrder?.storeCode))?.storeName || t("purchases.allStores")}
+                      disabled
+                      className="text-sm bg-gray-100"
+                    />
+                  )}
+                </div>
 
-                      {/* Receipt Number */}
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium">
-                          {t("purchases.receiptNumberLabel")} <span className="text-red-500">*</span>
-                        </label>
-                        <Input
-                          value={purchaseOrder.receiptNumber || purchaseOrder.poNumber || `PR-${purchaseOrder.id}`}
-                          disabled
-                          className="h-9 sm:h-10 text-sm bg-gray-100"
-                        />
-                      </div>
+                {/* Supplier Selection */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium flex items-center gap-1">
+                    <span>{t("purchases.supplier")}</span>
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <Select 
+                    disabled={!isEditMode} 
+                    value={formData.supplierId}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, supplierId: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={getSupplierName(parseInt(formData.supplierId))} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {suppliers.map((supplier: any) => (
+                        <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                          {supplier.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                      {/* Purchase Date */}
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium">
-                          {t("purchases.purchaseDate")} <span className="text-red-500">*</span>
-                        </label>
-                        <Input
-                          type="date"
-                          value={formData.purchaseDate}
-                          disabled={!isEditMode}
-                          onChange={(e) => setFormData(prev => ({ ...prev, purchaseDate: e.target.value }))}
-                          className="h-9 sm:h-10 text-sm"
-                        />
-                      </div>
+                {/* Receipt Number */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium flex items-center gap-1">
+                    <span>{t("purchases.receiptNumber")}</span>
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    value={purchaseOrder.receiptNumber || purchaseOrder.poNumber || `PR-${purchaseOrder.id}`}
+                    disabled
+                    className="text-sm bg-gray-100"
+                  />
+                </div>
 
-                      {/* Purchase Type */}
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium">
-                          {t("purchases.purchaseType")} <span className="text-red-500">*</span>
-                        </label>
-                        <Select 
-                          disabled={!isEditMode} 
-                          value={formData.purchaseType}
-                          onValueChange={(value) => setFormData(prev => ({ ...prev, purchaseType: value }))}
-                        >
-                          <SelectTrigger className="h-9 sm:h-10">
-                            <SelectValue placeholder={formData.purchaseType || "Không xác định"} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="raw_materials">{t("purchases.rawMaterials")}</SelectItem>
-                            <SelectItem value="expenses">{t("purchases.expenses")}</SelectItem>
-                            <SelectItem value="others">{t("purchases.others")}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                {/* Purchase Date */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium flex items-center gap-1">
+                    <span>{t("purchases.purchaseDate")}</span>
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    type="date"
+                    value={formData.purchaseDate}
+                    disabled={!isEditMode}
+                    onChange={(e) => setFormData(prev => ({ ...prev, purchaseDate: e.target.value }))}
+                    className="text-sm"
+                  />
+                </div>
 
-                      {/* Employee Assignment */}
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium">{t("purchases.assignedTo")}</label>
-                        <Select 
-                          disabled={!isEditMode} 
-                          value={formData.employeeId}
-                          onValueChange={(value) => setFormData(prev => ({ ...prev, employeeId: value }))}
-                        >
-                          <SelectTrigger className="h-9 sm:h-10">
-                            <SelectValue placeholder={formData.employeeId ? getEmployeeName(parseInt(formData.employeeId)) : "Không xác định"} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {employees.map((employee: any) => (
-                              <SelectItem key={employee.id} value={employee.id.toString()}>
-                                {employee.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                {/* Purchase Type */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium flex items-center gap-1">
+                    <span>{t("purchases.purchaseType")}</span>
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <Select 
+                    disabled={!isEditMode} 
+                    value={formData.purchaseType}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, purchaseType: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={formData.purchaseType || "Không xác định"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="raw_materials">{t("purchases.rawMaterials")}</SelectItem>
+                      <SelectItem value="expenses">{t("purchases.expenses")}</SelectItem>
+                      <SelectItem value="others">{t("purchases.others")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                      {/* File Attachments - Same position as in purchase-form */}
-                      <div className="space-y-2">
-                        <label className="text-xs sm:text-sm font-medium flex items-center gap-2">
-                          <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
-                          {t("purchases.attachedFilesCount")} ({attachedDocuments?.length || 0})
-                        </label>
-                        {isEditMode ? (
-                          <div>
-                            <div 
-                              className="border border-dashed border-gray-300 rounded-md p-2 text-center bg-gray-50/50 h-9 sm:h-10 flex items-center justify-center cursor-pointer hover:border-gray-400 transition-colors"
-                              onClick={() => document.getElementById('file-upload-edit')?.click()}
-                            >
-                              <div className="flex items-center gap-2">
-                                <Upload className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
-                                <span className="text-xs sm:text-sm text-gray-600">
-                                  {uploadingFiles ? t("purchases.uploadingFiles") : t("purchases.dragOrClickToUpload")}
-                                </span>
+                {/* Employee Assignment */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium">{t("purchases.assignedTo")}</label>
+                  <Select 
+                    disabled={!isEditMode} 
+                    value={formData.employeeId}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, employeeId: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={formData.employeeId ? getEmployeeName(parseInt(formData.employeeId)) : "Không xác định"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees.map((employee: any) => (
+                        <SelectItem key={employee.id} value={employee.id.toString()}>
+                          {employee.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* File Attachments */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium flex items-center gap-2">
+                    <Upload className="h-4 w-4" />
+                    {t("purchases.attachDocuments")}
+                  </label>
+                  {isEditMode ? (
+                    <div
+                      className="border border-dashed border-gray-300 rounded-md p-3 hover:border-gray-400 transition-colors cursor-pointer bg-gray-50/50 min-h-[42px] flex flex-col"
+                      onClick={(e) => {
+                        if (e.target === e.currentTarget || (e.target as HTMLElement).closest('.upload-prompt')) {
+                          document.getElementById('file-upload-edit')?.click();
+                        }
+                      }}
+                    >
+                      {attachedDocuments && attachedDocuments.length === 0 ? (
+                        <div className="upload-prompt flex items-center justify-center gap-2">
+                          <Upload className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-600">
+                            {uploadingFiles ? t("purchases.uploadingFiles") : t("purchases.dragOrClickToUpload")}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="space-y-1 max-h-32 overflow-y-auto">
+                          {attachedDocuments.map((doc: any, index: number) => (
+                            <div key={doc.id || index} className="flex items-center justify-between bg-white border border-gray-200 rounded p-1.5 hover:bg-gray-50 transition-colors" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <FileText className="h-4 w-4 text-gray-500 shrink-0" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-medium text-gray-900 truncate" title={doc.originalFileName || doc.fileName}>
+                                    {doc.originalFileName || doc.fileName}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {doc.fileSize ? `${(doc.fileSize / 1024).toFixed(1)} KB` : ''}
+                                  </p>
+                                </div>
                               </div>
-                              <input
-                                id="file-upload-edit"
-                                type="file"
-                                multiple
-                                accept=".pdf,.jpg,.jpeg,.png,.gif,.txt,.doc,.docx"
-                                className="hidden"
-                                onChange={(e) => handleFileUpload(e.target.files)}
-                                disabled={uploadingFiles}
-                              />
+                              <div className="flex items-center gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => handleFileDownload(doc)} className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700 hover:bg-blue-50 shrink-0">
+                                  <Download className="h-3 w-3" />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleFileDelete(doc.id)} className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0">
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </div>
-                            {attachedDocuments && attachedDocuments.length > 0 && (
-                              <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
-                                {attachedDocuments.map((doc: any, index: number) => (
-                                  <div key={doc.id || index} className="flex items-center justify-between bg-white border border-gray-200 rounded p-1.5 text-xs">
-                                    <FileText className="h-3 w-3 text-gray-500 shrink-0 mr-1" />
-                                    <span className="truncate flex-1">{doc.originalFileName || doc.fileName}</span>
-                                    <div className="flex items-center gap-1">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-5 w-5 p-0 text-blue-500 hover:text-blue-700"
-                                        onClick={() => handleFileDownload(doc)}
-                                      >
-                                        <Download className="h-3 w-3" />
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-5 w-5 p-0 text-red-500 hover:text-red-700"
-                                        onClick={() => handleFileDelete(doc.id)}
-                                      >
-                                        <X className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div>
-                            {attachedDocuments && attachedDocuments.length > 0 ? (
-                              <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {attachedDocuments.map((doc: any, index: number) => (
-                                  <div key={doc.id || index} className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3 hover:bg-blue-100 transition-colors">
-                                    <FileText className="h-5 w-5 text-blue-600 shrink-0" />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="font-medium text-gray-900 text-sm truncate">
-                                        {doc.originalFileName || doc.fileName}
-                                      </div>
-                                      <div className="text-gray-500 text-xs mt-1">
-                                        {doc.fileSize ? `${(doc.fileSize / 1024).toFixed(1)} KB` : ''} 
-                                        {doc.fileType ? ` • ${doc.fileType}` : ''}
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-200"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleFileDownload(doc);
-                                        }}
-                                        title="Tải xuống"
-                                      >
-                                        <Download className="h-4 w-4" />
-                                      </Button>
-                                      {isEditMode && (
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleFileDelete(doc.id);
-                                          }}
-                                          title="Xóa tệp"
-                                        >
-                                          <X className="h-4 w-4" />
-                                        </Button>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="border border-gray-300 rounded-md p-4 bg-gray-50 flex items-center justify-center text-sm text-gray-500">
-                                <FileText className="h-5 w-5 mr-2 text-gray-400" />
-                                {t("purchases.noAttachedFiles")}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Notes - Full width */}
-                    <div className="space-y-2">
-                      <label className="text-xs sm:text-sm font-medium">{t("purchases.notes")}</label>
-                      <Textarea
-                        value={formData.notes}
-                        disabled={!isEditMode}
-                        onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                        placeholder={t("purchases.notesPlaceholder")}
-                        rows={3}
-                        className="text-sm resize-none"
+                          ))}
+                          <button type="button" className="upload-prompt w-full text-xs text-blue-600 hover:text-blue-700 py-1 flex items-center justify-center gap-1" onClick={() => document.getElementById('file-upload-edit')?.click()}>
+                            <Plus className="h-3 w-3" />
+                            {t("purchases.addItem")}
+                          </button>
+                        </div>
+                      )}
+                      <input
+                        id="file-upload-edit"
+                        type="file"
+                        multiple
+                        accept=".pdf,.jpg,.jpeg,.png,.gif,.txt,.doc,.docx"
+                        className="hidden"
+                        onChange={(e) => handleFileUpload(e.target.files)}
+                        disabled={uploadingFiles}
                       />
                     </div>
-
-                    {/* Store Selection - Same width as in purchase-form */}
-                    <div className="space-y-2">
-                      <label className="text-xs sm:text-sm font-medium">
-                        {t("common.shop")} <span className="text-red-500">*</span>
-                      </label>
-                      {isEditMode ? (
-                        <Select 
-                          disabled={!isEditMode} 
-                          value={formData.storeCode || purchaseOrder?.storeCode}
-                          onValueChange={(value) => setFormData(prev => ({ ...prev, storeCode: value }))}
-                        >
-                          <SelectTrigger className="h-9 sm:h-10">
-                            <SelectValue placeholder={t("purchases.allStores")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {storesData?.map((store: any) => (
-                              <SelectItem key={store.id} value={store.storeCode}>
-                                {store.storeName}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                  ) : (
+                    <div>
+                      {attachedDocuments && attachedDocuments.length > 0 ? (
+                        <div className="space-y-1">
+                          {attachedDocuments.map((doc: any, index: number) => (
+                            <div key={doc.id || index} className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded p-2 hover:bg-blue-100 transition-colors">
+                              <FileText className="h-4 w-4 text-blue-600 shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium text-gray-900 truncate">{doc.originalFileName || doc.fileName}</p>
+                                <p className="text-xs text-gray-500">{doc.fileSize ? `${(doc.fileSize / 1024).toFixed(1)} KB` : ''}</p>
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => handleFileDownload(doc)} className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-200">
+                                <Download className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
                       ) : (
-                        <Input
-                          value={storesData?.find((s: any) => s.storeCode === (formData.storeCode || purchaseOrder?.storeCode))?.storeName || t("purchases.allStores")}
-                          disabled
-                          className="h-9 sm:h-10 text-sm bg-gray-100"
-                        />
+                        <div className="border border-gray-300 rounded-md p-3 bg-gray-50 flex items-center justify-center text-sm text-gray-500">
+                          <FileText className="h-4 w-4 mr-2 text-gray-400" />
+                          Không có tệp đính kèm
+                        </div>
                       )}
                     </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Notes - Full width */}
+              <div className="space-y-2">
+                <label className="text-xs sm:text-sm font-medium">{t("purchases.notes")}</label>
+                <Textarea
+                  value={formData.notes}
+                  disabled={!isEditMode}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder={t("purchases.notesPlaceholder")}
+                  rows={3}
+                  className="text-sm resize-none"
+                />
+              </div>
 
                     {/* Payment Status and Methods - Same Row */}
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
@@ -2245,7 +2226,15 @@ export default function PurchaseViewPage({ onLogout, onSuccess, hideBackButton =
           <div className="flex gap-4 justify-end">
             <Button
               variant="outline"
-              onClick={() => navigate('/purchases')}
+              onClick={() => {
+                if (onSuccess) {
+                  // Dialog mode - call onSuccess to close
+                  onSuccess();
+                } else {
+                  // Standalone mode - navigate back
+                  navigate('/purchases');
+                }
+              }}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               {t("common.back")}

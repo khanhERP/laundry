@@ -172,12 +172,12 @@ export function DashboardOverview() {
 
       // Ensure we have valid arrays
       let validOrders = Array.isArray(orders) ? orders : [];
-      
+
       // Apply store filter
       if (storeFilter !== "all") {
         validOrders = validOrders.filter((order: any) => order.storeCode === storeFilter);
       }
-      
+
       const validOrderItems = Array.isArray(orderItems) ? orderItems : [];
       const validTables = Array.isArray(tables) ? tables : [];
 
@@ -460,7 +460,9 @@ export function DashboardOverview() {
                 onChange={(e) => setStoreFilter(e.target.value)}
                 className="h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="all">{t("reports.all")}</option>
+                {storesData.filter((store: any) => store.typeUser !== 1).length > 1 && (
+                  <option value="all">{t("reports.all")}</option>
+                )}
                 {storesData.map((store: any) => (
                   <option key={store.id} value={store.storeCode}>
                     {store.storeName}

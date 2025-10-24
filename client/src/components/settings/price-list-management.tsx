@@ -1,4 +1,3 @@
-
 import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -118,7 +117,46 @@ export function PriceListManagement() {
     name: "",
     description: "",
     isActive: true,
+    storeCodes: [] as string[],
   });
+  const [storeFilter, setStoreFilter] = useState<string>("all");
+
+  // Fetch current user store settings
+  const { data: currentUserSettings } = useQuery({
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings");
+      if (!response.ok) throw new Error("Failed to fetch user settings");
+      return response.json();
+    },
+  });
+
+  const isAdmin = currentUserSettings?.isAdmin || false;
+  const userStoreCodes = currentUserSettings?.parent?.split(',').map((s: string) => s.trim()) || [];
+
+  // Initialize store filter for non-admin users
+  useEffect(() => {
+    if (!isAdmin && userStoreCodes.length > 0 && storeFilter === "all") {
+      setStoreFilter(userStoreCodes[0]);
+    }
+  }, [isAdmin, userStoreCodes]);
+
+  // Fetch all stores for selection
+  const { data: allStores = [] } = useQuery({
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list");
+      if (!response.ok) throw new Error("Failed to fetch stores");
+      return response.json();
+    },
+  });
+
+  // Filter stores based on user permission
+  const availableStores = isAdmin 
+    ? allStores.filter((store: any) => store.typeUser !== 1)
+    : allStores.filter((store: any) => 
+        store.typeUser !== 1 && userStoreCodes.includes(store.storeCode)
+      );
 
   // Fetch next price list code
   const { data: nextCodeData } = useQuery({
@@ -142,6 +180,18 @@ export function PriceListManagement() {
       return response.json();
     },
   });
+
+  // Filter price lists based on store filter
+  const filteredPriceLists = useMemo(() => {
+    if (storeFilter === "all") {
+      return priceLists;
+    }
+    return priceLists.filter((priceList: PriceList) => {
+      if (!priceList.storeCode) return false;
+      const storeCodes = priceList.storeCode.split(',').map((s: string) => s.trim());
+      return storeCodes.includes(storeFilter);
+    });
+  }, [priceLists, storeFilter]);
 
   // Fetch all products for search/selection
   const { data: allProducts = [] } = useQuery({
@@ -168,7 +218,7 @@ export function PriceListManagement() {
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
     queryFn: async () => {
       if (selectedPriceLists.length === 0) return [];
-      
+
       const itemsPromises = selectedPriceLists.map(async (priceListId) => {
         const response = await apiRequest("GET", `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists/${priceListId}`);
         if (!response.ok) throw new Error("Failed to fetch price list items");
@@ -185,6 +235,24 @@ export function PriceListManagement() {
   // Create mutation
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Auto-generate code if not provided
+      if (!data.code) {
+        // Fetch current price lists to determine the next code
+        const existingListsResponse = await apiRequest("GET", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists");
+        if (!existingListsResponse.ok) throw new Error("Failed to fetch existing price lists for code generation");
+        const existingLists = await existingListsResponse.json();
+        
+        const maxCode = existingLists.reduce((max: number, list: PriceList) => {
+          const match = list.code?.match(/BG-(\d+)/);
+          if (match) {
+            const num = parseInt(match[1], 10);
+            return num > max ? num : max;
+          }
+          return max;
+        }, 0);
+        data.code = `BG-${String(maxCode + 1).padStart(6, "0")}`;
+      }
+      
       const response = await apiRequest("POST", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists", data);
       if (!response.ok) {
         const error = await response.json();
@@ -330,6 +398,7 @@ export function PriceListManagement() {
       name: "",
       description: "",
       isActive: true,
+      storeCodes: [],
     });
   };
 
@@ -355,6 +424,15 @@ export function PriceListManagement() {
       return;
     }
 
+    if (priceListForm.storeCodes.length === 0) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng chọn ít nhất 1 chi nhánh áp dụng",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (editingPriceList && !priceListForm.code) {
       toast({
         title: "Lỗi",
@@ -364,16 +442,21 @@ export function PriceListManagement() {
       return;
     }
 
+    const submitData = {
+      ...priceListForm,
+      storeCode: priceListForm.storeCodes.join(','),
+    };
+
     if (editingPriceList) {
       // Update existing price list
       updateMutation.mutate({
         id: editingPriceList.id,
-        data: priceListForm,
+        data: submitData,
       });
     } else {
       // Create price list without any products initially
       createMutation.mutate({
-        ...priceListForm,
+        ...submitData,
         items: [],
       });
     }
@@ -386,6 +469,7 @@ export function PriceListManagement() {
       name: priceList.name,
       description: priceList.description || "",
       isActive: priceList.isActive,
+      storeCodes: priceList.storeCode ? priceList.storeCode.split(',').map((s: string) => s.trim()) : [],
     });
     setIsDialogOpen(true);
   };
@@ -417,11 +501,11 @@ export function PriceListManagement() {
 
     // Get unique product IDs that exist in ANY selected price list
     const productIdsInPriceLists = new Set<number>();
-    
+
     priceListItemsData.forEach((item: PriceListItem) => {
       productIdsInPriceLists.add(item.productId);
     });
-    
+
     const result: ProductWithPrices[] = allProducts
       .filter((product: Product) => productIdsInPriceLists.has(product.id))
       .map((product: Product) => {
@@ -490,7 +574,7 @@ export function PriceListManagement() {
     newPrice: string
   ) => {
     const key = `${priceListId}-${productId}`;
-    
+
     // Remove from editing state
     setEditingPrices((prev) => {
       const newState = { ...prev };
@@ -529,7 +613,7 @@ export function PriceListManagement() {
             productId,
             price: "0",
           });
-          
+
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.message || errorData.error || "Không thể thêm sản phẩm");
@@ -549,7 +633,7 @@ export function PriceListManagement() {
       await queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists] });
       await queryClient.refetchQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists] });
       await queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists"] });
-      
+
       setShowProductSelector(false);
       setSelectedProducts([]);
       toast({
@@ -694,11 +778,11 @@ export function PriceListManagement() {
 
         // Process rows
         const updates: Array<{ priceListId: number; productId: number; price: string }> = [];
-        
+
         for (let i = 1; i < jsonData.length; i++) {
           const row = jsonData[i];
           const sku = row[0]?.toString().trim();
-          
+
           if (!sku) continue;
 
           // Find product by SKU
@@ -811,6 +895,26 @@ export function PriceListManagement() {
     <div className="h-full flex gap-4">
       {/* Left Sidebar - Price Lists */}
       <div className="w-64 flex-shrink-0 space-y-4">
+        {/* Store Filter */}
+        <div className="space-y-2">
+          <Label>Lọc theo cửa hàng</Label>
+          <Select value={storeFilter} onValueChange={setStoreFilter}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Chọn cửa hàng" />
+            </SelectTrigger>
+            <SelectContent>
+              {isAdmin && (
+                <SelectItem value="all">Tất cả</SelectItem>
+              )}
+              {availableStores.map((store: any) => (
+                <SelectItem key={store.id} value={store.storeCode}>
+                  {store.storeName} ({store.storeCode})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">{t("settings.priceLists")}</h3>
           <Button
@@ -827,7 +931,7 @@ export function PriceListManagement() {
           {priceListsLoading ? (
             <div className="text-sm text-gray-500">Đang tải...</div>
           ) : (
-            priceLists.map((priceList: PriceList) => (
+            filteredPriceLists.map((priceList: PriceList) => (
               <div
                 key={priceList.id}
                 className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
@@ -880,7 +984,17 @@ export function PriceListManagement() {
                       e.stopPropagation();
                       handleDelete(priceList);
                     }}
-                    disabled={priceList.isDefault}
+                    disabled={
+                      priceList.isDefault || 
+                      (!isAdmin && priceList.storeCode && priceList.storeCode.split(',').filter((s: string) => s.trim()).length > 1)
+                    }
+                    title={
+                      priceList.isDefault 
+                        ? "Không thể xóa bảng giá mặc định"
+                        : (!isAdmin && priceList.storeCode && priceList.storeCode.split(',').filter((s: string) => s.trim()).length > 1)
+                          ? "Chỉ admin mới có quyền xóa bảng giá áp dụng nhiều cửa hàng"
+                          : ""
+                    }
                     className="h-8 w-8 p-0"
                   >
                     <Trash2 className="w-4 h-4 text-red-500" />
@@ -1003,7 +1117,16 @@ export function PriceListManagement() {
                           const currentValue = editingValue !== undefined 
                             ? editingValue 
                             : (product.prices[priceListId] || "");
-                          
+
+                          // Find the price list to check store count
+                          const priceList = priceLists.find((pl: PriceList) => pl.id === priceListId);
+                          const storeCount = priceList?.storeCode 
+                            ? priceList.storeCode.split(',').filter((s: string) => s.trim()).length 
+                            : 0;
+
+                          // Allow editing only if admin OR price list is for single store
+                          const canEdit = isAdmin || storeCount <= 1;
+
                           return (
                             <TableCell key={priceListId} className="text-right">
                               <Input
@@ -1027,14 +1150,14 @@ export function PriceListManagement() {
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
                                     e.preventDefault();
-                                    
+
                                     // Save current value
                                     handlePriceSave(
                                       priceListId,
                                       product.id,
                                       e.currentTarget.value
                                     );
-                                    
+
                                     // Move to next cell
                                     const nextColIndex = colIndex + 1;
                                     if (nextColIndex < selectedPriceLists.length) {
@@ -1071,6 +1194,8 @@ export function PriceListManagement() {
                                 className="text-right w-full"
                                 min="0"
                                 step="1000"
+                                disabled={!canEdit}
+                                title={!canEdit ? "Chỉ admin mới có quyền sửa giá cho bảng giá áp dụng nhiều cửa hàng" : ""}
                               />
                             </TableCell>
                           );
@@ -1082,7 +1207,7 @@ export function PriceListManagement() {
                             onClick={async (e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              
+
                               if (selectedPriceLists.length === 0) {
                                 toast({
                                   title: "Lỗi",
@@ -1105,7 +1230,7 @@ export function PriceListManagement() {
                                   });
                                   successCount++;
                                 }
-                                
+
                                 await queryClient.refetchQueries({ 
                                   queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
                                   exact: true 
@@ -1147,7 +1272,7 @@ export function PriceListManagement() {
                   </span>
                 )}
               </div>
-              
+
               {filteredProducts.length > 0 && (
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
@@ -1171,7 +1296,7 @@ export function PriceListManagement() {
                     </Select>
                     <span className="text-sm">{t("settings.productsCount")}</span>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
@@ -1265,12 +1390,12 @@ export function PriceListManagement() {
                               const matchesCategory =
                                 selectedCategory === "all" ||
                                 product.categoryId.toString() === selectedCategory;
-                              
+
                               // Check if product is not already in selected price lists
                               const notInPriceList = !priceListItemsData.some(
                                 (item: PriceListItem) => item.productId === product.id
                               );
-                              
+
                               return matchesSearch && matchesCategory && notInPriceList;
                             });
                             setSelectedProducts(availableProducts.map((p: Product) => p.id));
@@ -1295,12 +1420,12 @@ export function PriceListManagement() {
                       const matchesCategory =
                         selectedCategory === "all" ||
                         product.categoryId.toString() === selectedCategory;
-                      
+
                       // Only show products not already in selected price lists
                       const notInPriceList = !priceListItemsData.some(
                         (item: PriceListItem) => item.productId === product.id
                       );
-                      
+
                       return matchesSearch && matchesCategory && notInPriceList;
                     })
                     .map((product: Product) => (
@@ -1335,12 +1460,12 @@ export function PriceListManagement() {
                     const matchesCategory =
                       selectedCategory === "all" ||
                       product.categoryId.toString() === selectedCategory;
-                    
+
                     // Only show products not already in selected price lists
                     const notInPriceList = !priceListItemsData.some(
                       (item: PriceListItem) => item.productId === product.id
                     );
-                    
+
                     return matchesSearch && matchesCategory && notInPriceList;
                   }).length === 0 && (
                     <TableRow>
@@ -1475,18 +1600,24 @@ export function PriceListManagement() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="code">
-                {t("settings.priceListCode")} <span className="text-red-500">*</span>
+                {t("settings.priceListCode")} {!editingPriceList && <span className="text-xs text-gray-500">(Tự động tạo nếu để trống)</span>}
+                {editingPriceList && <span className="text-red-500">*</span>}
               </Label>
               <Input
                 id="code"
-                value={priceListForm.code}
+                value={priceListForm.code || ""}
                 onChange={(e) =>
                   setPriceListForm({ ...priceListForm, code: e.target.value })
                 }
-                placeholder="VD: BG-0000001"
-                required
+                placeholder={editingPriceList ? "Nhập mã bảng giá" : "Để trống để tự động tạo (VD: BG-0000001)"}
+                required={editingPriceList}
+                disabled={!editingPriceList && nextCodeData?.code ? false : false}
               />
-              <p className="text-xs text-gray-500">Nhập mã bảng giá (hoặc để trống để tự động tạo)</p>
+              {!editingPriceList && nextCodeData?.code && (
+                <p className="text-xs text-green-600">
+                  Mã tiếp theo sẽ là: <strong>{nextCodeData.code}</strong>
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -1517,6 +1648,62 @@ export function PriceListManagement() {
                 }
                 placeholder={t("settings.enterPriceListDescription")}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="storeCodes">
+                Cửa hàng áp dụng <span className="text-red-500">*</span>
+              </Label>
+              <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+                {availableStores.length === 0 ? (
+                  <p className="text-sm text-gray-500">Không có chi nhánh nào</p>
+                ) : (
+                  availableStores.map((store: any) => (
+                    <div key={store.id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`store-${store.id}`}
+                        checked={priceListForm.storeCodes.includes(store.storeCode)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            // Nếu không phải admin, chỉ cho chọn 1 chi nhánh
+                            if (!isAdmin) {
+                              setPriceListForm({
+                                ...priceListForm,
+                                storeCodes: [store.storeCode],
+                              });
+                            } else {
+                              setPriceListForm({
+                                ...priceListForm,
+                                storeCodes: [...priceListForm.storeCodes, store.storeCode],
+                              });
+                            }
+                          } else {
+                            setPriceListForm({
+                              ...priceListForm,
+                              storeCodes: priceListForm.storeCodes.filter(
+                                (code) => code !== store.storeCode
+                              ),
+                            });
+                          }
+                        }}
+                        className="w-4 h-4"
+                      />
+                      <label
+                        htmlFor={`store-${store.id}`}
+                        className="text-sm cursor-pointer flex-1"
+                      >
+                        {store.storeName} ({store.storeCode})
+                      </label>
+                    </div>
+                  ))
+                )}
+              </div>
+              <p className="text-xs text-gray-500">
+                {isAdmin 
+                  ? "Bạn có thể chọn nhiều cửa hàng" 
+                  : "Bạn chỉ có thể chọn 1 chi nhánh được phân quyền"}
+              </p>
             </div>
 
             <DialogFooter>

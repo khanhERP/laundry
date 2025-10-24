@@ -540,7 +540,9 @@ export function SpendingReport() {
                   <SelectValue placeholder="Chọn cửa hàng" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
+                  {storesData.filter((store: any) => store.typeUser !== 1).length > 1 && (
+                    <SelectItem value="all">Tất cả</SelectItem>
+                  )}
                   {storesData
                     .filter((store: any) => store.typeUser !== 1)
                     .map((store: any) => (

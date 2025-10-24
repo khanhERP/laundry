@@ -21,10 +21,9 @@ export async function apiRequest(
     method,
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options?.headers,
     },
-    credentials: 'include', // Important: Send cookies with request
     ...options,
   };
 
@@ -32,12 +31,16 @@ export async function apiRequest(
     config.body = JSON.stringify(data);
 
     // Additional logging for payment method requests
-    if (url.includes("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/") && url.includes("/status") && method === "PUT") {
+    if (
+      url.includes("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/") &&
+      url.includes("/status") &&
+      method === "PUT"
+    ) {
       console.log("🔍 apiRequest: Final request body for payment:", {
         url,
         requestBodyString: JSON.stringify(data),
         parsedBack: JSON.parse(JSON.stringify(data)),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
   }
@@ -45,7 +48,7 @@ export async function apiRequest(
   const response = await fetch(url, config);
 
   // Check for token refresh in response header
-  const newToken = response.headers.get('X-New-Token');
+  const newToken = response.headers.get("X-New-Token");
   if (newToken) {
     localStorage.setItem("authToken", newToken);
     console.log("🔄 Token automatically refreshed");
@@ -72,9 +75,7 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
-      credentials: "include",
-    });
+    const res = await fetch(queryKey.join("/") as string);
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;
@@ -91,9 +92,8 @@ export const queryClient = new QueryClient({
       // queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: true,
-      staleTime: 0, // No cache - always fetch fresh
+      staleTime: 0, // No cache
       gcTime: 0, // Don't keep in memory
-      cacheTime: 0, // Disable cache completely
       retry: 1,
       refetchOnMount: true,
       refetchOnReconnect: true,

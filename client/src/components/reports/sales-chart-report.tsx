@@ -156,9 +156,6 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
         const floorFilter =
           selectedFloor !== "all" ? `/${selectedFloor}` : "/all";
 
-        // FIXED: Construct URL with store filter - use storeFilter value or 'all'
-        const storeCodeFilter = storeFilter && storeFilter !== "all" ? `/${storeFilter}` : "/all";
-
         console.log("Sales Chart - Fetching orders with date range:", {
           startDate,
           endDate,
@@ -174,12 +171,11 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
           orderStatusFilter,
           storeFilter,
           floorFilter,
-          storeCodeFilter,
-          finalURL: `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range/${startDateTimeISO}/${endDateTimeISO}${floorFilter}${storeCodeFilter}`,
+          finalURL: `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range/${startDateTimeISO}/${endDateTimeISO}${floorFilter}`,
         });
 
         const response = await fetch(
-          `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range/${startDateTimeISO}/${endDateTimeISO}${floorFilter}${storeCodeFilter}`,
+          `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range/${startDateTimeISO}/${endDateTimeISO}${floorFilter}`,
         );
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -238,7 +234,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
   });
 
   // Query store list for filter
-  const { data: storesFilter = [] } = useQuery({
+  const { data: storesFilterData = [] } = useQuery({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list"],
     queryFn: async () => {
       try {
@@ -313,10 +309,9 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
       storeFilter, // Include store filter in query key
     ],
     queryFn: async () => {
-      const storeParam = storeFilter && storeFilter !== 'all' ? `?storeCode=${storeFilter}` : '';
-      const response = await fetch(
-        `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products${storeParam}`,
-      );
+      const storeParam =
+        storeFilter && storeFilter !== "all" ? `?storeCode=${storeFilter}` : "";
+      const response = await fetch(`https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products${storeParam}`);
       if (!response.ok) throw new Error("Failed to fetch products");
       return response.json();
     },
@@ -326,7 +321,8 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
   const { data: categories } = useQuery({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/categories", storeFilter],
     queryFn: async () => {
-      const storeParam = storeFilter && storeFilter !== 'all' ? `?storeCode=${storeFilter}` : '';
+      const storeParam =
+        storeFilter && storeFilter !== "all" ? `?storeCode=${storeFilter}` : "";
       const response = await fetch(`https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/categories${storeParam}`);
       if (!response.ok) throw new Error("Failed to fetch categories");
       return response.json();
@@ -335,17 +331,10 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
   });
 
   const { data: customers } = useQuery({
-    queryKey: [
-      "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers",
-      customerSearch,
-      customerStatus,
-      startDate,
-      endDate,
-      storeFilter, // Include store filter in query key
-    ],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers", customerSearch, customerStatus],
     queryFn: async () => {
       const response = await fetch(
-        `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers/${customerSearch || "all"}/${customerStatus}/${storeFilter}`,
+        `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers/${customerSearch || "all"}/${customerStatus}`,
       );
       if (!response.ok) throw new Error("Failed to fetch customers");
       return response.json();
@@ -525,7 +514,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
   };
 
   const getStoresFilter = (): any[] => {
-    return storesFilter;
+    return storesFilterData;
   };
 
   // Function to get available floors, considering both fixed and dynamic data
@@ -1369,11 +1358,11 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
 
                                         let customerPayment;
                                         if (orderPriceIncludeTax) {
-                                          // When priceIncludeTax = true: customer payment = total from DB
+                                          // priceIncludeTax = true: customer payment = total from DB
                                           customerPayment =
                                             transactionTotal - transactionTax;
                                         } else {
-                                          // When priceIncludeTax = false: customer payment = revenue + tax
+                                          // priceIncludeTax = false: customer payment = revenue + tax
                                           const revenue = Math.max(
                                             0,
                                             transactionSubtotal -
@@ -2910,7 +2899,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
                                 <TableCell className="text-right text-red-600 min-w-[100px] px-2">
                                   {formatCurrency(item.discount)}
                                 </TableCell>
-                                <TableCell className="text-right text-green-600 font-medium min-w-[120px] px-2">
+                                <TableCell className="text-right text-green-600 font-medium text-sm min-w-[140px] px-2">
                                   {(() => {
                                     const transactionSubtotal = Number(
                                       item.totalAmount || 0,
@@ -4830,7 +4819,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
                         {t("common.total")}
                       </TableCell>
                       <TableCell className="text-center border-r bg-green-50 min-w-[150px] px-4">
-                        {data.length} kh �ch hàng
+                        {data.length} kh ch hàng
                       </TableCell>
                       <TableCell className="text-center border-r min-w-[100px] px-4">
                         {(() => {
@@ -5434,7 +5423,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
             )
             .slice(0, 10);
 
-          console.log("Generated chart data:", chartData);
+          console.log("Generated chart data:", chart);
           return chartData;
 
         case "product":
@@ -6577,18 +6566,24 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
                             ? "Đang tải..."
                             : storeFilter === "all"
                               ? "Tất cả"
-                              : storesData?.find(
-                                  (store: any) =>
-                                    store.storeCode === storeFilter,
-                                )?.storeName
+                              : storesFilterData
+                                  ?.filter((store: any) => store.typeUser !== 1)
+                                  .find(
+                                    (store: any) =>
+                                      store.storeCode === storeFilter,
+                                  )?.storeName
                         }
                       />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Tất cả</SelectItem>
-                      {storesData
-                        ?.filter((store: any) => store.typeUser !== 1)
-                        .map((store: any) => (
+                      {storesFilterData &&
+                        Array.isArray(storesFilterData) &&
+                        storesFilterData.length > 1 && (
+                          <SelectItem value="all">{t("common.all")}</SelectItem>
+                        )}
+                      {storesFilterData &&
+                        Array.isArray(storesFilterData) &&
+                        storesFilterData.map((store: any) => (
                           <SelectItem key={store.id} value={store.storeCode}>
                             {store.storeName}
                           </SelectItem>
@@ -6600,7 +6595,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
                       Đang tải danh sách cửa hàng...
                     </p>
                   )}
-                  {!storesLoading && !storesData && (
+                  {!storesLoading && !storesFilterData && (
                     <p className="text-xs text-red-500 mt-1">
                       Lỗi khi tải danh sách cửa hàng
                     </p>
@@ -6845,7 +6840,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
 
           {analysisType === "product" && (
             <div className="pt-4 border-t border-gray-100">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                     <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>

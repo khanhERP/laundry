@@ -477,7 +477,9 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                         onChange={(e) => setStoreFilter(e.target.value)}
                         className="h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer"
                       >
-                        <option value="all">{t("reports.allStores")}</option>
+                        {storesData.filter((store: any) => store.typeUser !== 1).length > 1 && (
+                          <option value="all">{t("common.all")}</option>
+                        )}
                         {storesData
                           .filter((store: any) => store.typeUser !== 1)
                           .map((store: any) => (
@@ -489,7 +491,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                     </div>
                     <div className="flex flex-col gap-2">
                       <label className="text-sm font-medium">
-                        {t("reports.startDate")}
+                        {String(t("reports.startDate"))}
                       </label>
                       <Input
                         type="date"
@@ -500,7 +502,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                     </div>
                     <div className="flex flex-col gap-2">
                       <label className="text-sm font-medium">
-                        {t("reports.endDate")}
+                        {String(t("reports.endDate"))}
                       </label>
                       <Input
                         type="date"
@@ -974,25 +976,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                     </svg>
                     {t('reports.menuAnalysisTab')}
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="table"
-                    className="flex items-center gap-2 text-gray-700 px-4 py-2.5 rounded-md data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-gray-100 transition-colors"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="w-4 h-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <rect x="3" y="3" width="18" height="18" rx="2" />
-                      <path d="M3 9h18M9 21V9" />
-                    </svg>
-                    {t('reports.tableAnalysisTab')}
-                  </TabsTrigger>
+
                   <TabsTrigger
                     value="spending"
                     className="flex items-center gap-2 text-gray-700 px-4 py-2.5 rounded-md data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-gray-100 transition-colors"
@@ -1033,9 +1017,11 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                   <MenuReport />
                 </TabsContent>
 
-                <TabsContent value="table">
-                  <TableReport />
-                </TabsContent>
+                {storeSettings?.businessType !== 'laundry' && (
+                  <TabsContent value="table">
+                    <TableReport />
+                  </TabsContent>
+                )}
 
                 <TabsContent value="spending">
                   <SalesChartReport />

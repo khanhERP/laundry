@@ -337,7 +337,9 @@ function MenuReport() {
                 onChange={(e) => setStoreFilter(e.target.value)}
                 className="h-10 w-full px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer"
               >
-                <option value="all">Tất cả</option>
+                {storesData.filter((store: any) => store.typeUser !== 1).length > 1 && (
+                  <option value="all">Tất cả</option>
+                )}
                 {storesData
                   .filter((store: any) => store.typeUser !== 1)
                   .map((store: any) => (

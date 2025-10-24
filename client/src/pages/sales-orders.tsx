@@ -358,7 +358,7 @@ export default function SalesOrders() {
   });
 
   // Query store list for filter
-  const { data: stores = [] } = useQuery({
+  const { data: storesData = [] } = useQuery({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list"],
     queryFn: async () => {
       try {
@@ -368,7 +368,7 @@ export default function SalesOrders() {
         }
         let data = await response.json();
         // Filter out admin accounts (userType = 1)
-        data = data.filter((store: any) => store.typeUser !== 1);
+        // data = data.filter((store: any) => store.typeUser !== 1); // This filtering is now done inline in the select component
         return Array.isArray(data) ? data : [];
       } catch (error) {
         console.error("Error fetching stores:", error);
@@ -2336,9 +2336,7 @@ export default function SalesOrders() {
               : item.unitPrice || "0",
           );
           const quantity = parseFloat(
-            editedItem.quantity !== undefined
-              ? editedItem.quantity
-              : item.quantity || "0",
+            editedItem.quantity !== undefined ? editedItem.quantity : item.quantity || "0",
           );
           calculatedSubtotal += unitPrice * quantity;
         } else {
@@ -2354,9 +2352,7 @@ export default function SalesOrders() {
               : item.unitPrice || "0",
           );
           const quantity = parseFloat(
-            editedItem.quantity !== undefined
-              ? editedItem.quantity
-              : item.quantity || "0",
+            editedItem.quantity !== undefined ? editedItem.quantity : item.quantity || "0",
           );
 
           const itemSubtotal = unitPrice * quantity;
@@ -3024,12 +3020,20 @@ export default function SalesOrders() {
                     onChange={(e) => setStoreCodeFilter(e.target.value)}
                     className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
-                    <option value="all">{t("orders.allStores")}</option>
-                    {stores.map((store: any) => (
-                      <option key={store.storeCode} value={store.storeCode}>
-                        {store.storeName || store.storeCode}
-                      </option>
-                    ))}
+                    {storesData.filter((store: any) => store.typeUser !== 1).length > 1 && (
+                      <option value="all">{t("common.allStores")}</option>
+                    )}
+                    {storesData.filter((store: any) => store.typeUser !== 1)
+                      .length > 1 && (
+                      <option value="all">{t("common.all")}</option>
+                    )}
+                    {storesData
+                      .filter((store: any) => store.typeUser !== 1)
+                      .map((store: any) => (
+                        <option key={store.storeCode} value={store.storeCode}>
+                          {store.storeName || store.storeCode}
+                        </option>
+                      ))}
                   </select>
                 </div>
               </div>
@@ -3962,7 +3966,7 @@ export default function SalesOrders() {
                                                                     checked,
                                                                   ) => {
                                                                     console.log(
-                                                                      "  � isPaid checkbox changed to:",
+                                                                      "   isPaid checkbox changed to:",
                                                                       checked,
                                                                     );
                                                                     updateEditableInvoiceField(
@@ -4431,8 +4435,7 @@ export default function SalesOrders() {
                                                                               editedOrderItems[
                                                                                 it
                                                                                   .id
-                                                                              ] ||
-                                                                              {};
+                                                                              ] || {};
                                                                             const itPrice =
                                                                               parseFloat(
                                                                                 editedIt.unitPrice !==

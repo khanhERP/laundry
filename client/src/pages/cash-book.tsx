@@ -711,8 +711,10 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                       <SelectValue placeholder="Chọn cửa hàng" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Tất cả</SelectItem>
-                      {storesData.map((store: any) => (
+                      {storesData.filter((store: any) => store.typeUser !== 1).length > 1 && (
+                        <SelectItem value="all">Tất cả</SelectItem>
+                      )}
+                      {storesData.filter((store: any) => store.typeUser !== 1).map((store: any) => (
                         <SelectItem key={store.id} value={store.storeCode}>
                           {store.storeName}
                         </SelectItem>
