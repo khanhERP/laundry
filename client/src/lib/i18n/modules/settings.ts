@@ -106,6 +106,7 @@ export const settingsTranslations: { [key: string]: SettingsTranslations } = {
     emailPlaceholder: "이메일을 입력하세요",
     domain: "도메인",
     domainPlaceholder: "도메인을 입력하세요 (예: store1.example.com)",
+    goToSalesPage: "판매 페이지로 이동",
     // E-invoice management
     einvoiceSetup: "전자세금계산서 설정",
     einvoiceDesc: "전자세금계산서 서비스 제공업체와의 연결을 관리합니다",
@@ -615,6 +616,7 @@ export const settingsTranslations: { [key: string]: SettingsTranslations } = {
     emailPlaceholder: "Enter email address",
     domain: "Domain",
     domainPlaceholder: "Enter domain (e.g., store1.example.com)",
+    goToSalesPage: "Go to Sales Page",
     // E-invoice management
     einvoiceSetup: "E-Invoice Setup",
     einvoiceDesc:
@@ -1141,6 +1143,7 @@ export const settingsTranslations: { [key: string]: SettingsTranslations } = {
     emailPlaceholder: "Nhập địa chỉ email",
     domain: "Tên miền",
     domainPlaceholder: "Nhập tên miền (ví dụ: store1.example.com)",
+    goToSalesPage: "Đến trang bán hàng",
     // E-invoice management
     einvoiceSetup: "Thiết lập HĐĐT",
     einvoiceDesc:

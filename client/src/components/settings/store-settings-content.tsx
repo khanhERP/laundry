@@ -265,7 +265,7 @@ export function StoreSettingsContent() {
                   <TableHead className="font-semibold text-gray-700 w-[100px] bg-gray-50 whitespace-nowrap">{t("settings.storeCode")}</TableHead>
                   <TableHead className="font-semibold text-gray-700 w-[280px] bg-gray-50 whitespace-nowrap">{t("settings.address")}</TableHead>
                   <TableHead className="font-semibold text-gray-700 w-[120px] bg-gray-50 whitespace-nowrap">{t("settings.phone")}</TableHead>
-                  <TableHead className="font-semibold text-gray-700 w-[150px] bg-gray-50 whitespace-nowrap">{t("settings.domain")}</TableHead>
+                  <TableHead className="font-semibold text-gray-700 w-[150px] bg-gray-50 whitespace-nowrap">{t("settings.goToSalesPage")}</TableHead>
                   {isAdmin && (
                     <TableHead className="text-center font-semibold text-gray-700 w-[80px] bg-gray-50 whitespace-nowrap">{t("common.actions")}</TableHead>
                   )}

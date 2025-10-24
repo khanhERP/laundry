@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Shield, Lock, Eye, EyeOff, User } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useTranslation } from "@/lib/i18n";
+import { useLocation } from "wouter";
+import { queryClient } from "@/lib/queryClient";
 
 interface PinAuthProps {
   onAuthSuccess: () => void;
@@ -25,6 +27,7 @@ export function PinAuth({ onAuthSuccess }: PinAuthProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     // Check if already authenticated with valid token
@@ -109,24 +112,35 @@ export function PinAuth({ onAuthSuccess }: PinAuthProps) {
           return;
         }
 
-        // Save token to localStorage
+        // Save token and user data
         localStorage.setItem("authToken", data.data.token);
-        
-        // Save user data
         localStorage.setItem("userData", JSON.stringify(data.data.user));
 
-        console.log("Login successful, token saved:", {
-          userId: data.data.user.id,
-          userName: data.data.user.userName,
-          storeCode: data.data.user.storeCode,
-          typeUser: data.data.user.typeUser
-        });
+        console.log("✅ Login successful, token saved");
 
-        toast({
-          title: "Đăng nhập thành công",
-          description: `Chào mừng ${data.data.user.userName} đến với hệ thống POS`,
-        });
+        // CRITICAL: Clear ALL cache and force fresh data fetch
+        console.log("🔄 Clearing cache after login...");
+        queryClient.clear();
+        queryClient.removeQueries();
 
+        // Force refetch critical data with new token
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/auth/verify"] }),
+          queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings"] }),
+          queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders"] }),
+          queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/tables"] }),
+          queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products"] }),
+        ]);
+
+        console.log("✅ Cache cleared, ready to navigate");
+
+        // Small delay to ensure cache is cleared
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Redirect to reports page
+        setLocation("/reports");
+        
+        // Call onAuthSuccess to update app state
         onAuthSuccess();
       } else {
         toast({
