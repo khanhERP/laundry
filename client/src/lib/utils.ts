@@ -12,7 +12,7 @@ export async function defaultFetcher({ queryKey }) {
 
   // Cho phép truyền cả path hoặc URL đầy đủ
   const url = path.startsWith("http") ? path : `${BASE_URL}${path}`;
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("authToken");
 
   const res = await fetch(url, {
     headers: {
