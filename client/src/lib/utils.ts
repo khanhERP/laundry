@@ -25,7 +25,7 @@ export async function defaultFetcher({ queryKey }) {
   // Xử lý token hết hạn hoặc lỗi xác thực
   if (res.status === 401) {
     console.warn("Token hết hạn hoặc không hợp lệ");
-    localStorage.removeItem("token");
+    localStorage.removeItem("authToken");
     window.location.href = "/";
     return;
   }
