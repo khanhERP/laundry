@@ -1,3 +1,4 @@
+
 import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -109,19 +110,15 @@ export function PriceListManagement() {
   const [priceListToDelete, setPriceListToDelete] = useState<PriceList | null>(null);
   const [editingPriceList, setEditingPriceList] = useState<PriceList | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [editingPrices, setEditingPrices] = useState({
+  const [editingPrices, setEditingPrices] = useState<{
     [key: string]: string;
-  });
+  }>({});
   const [priceListForm, setPriceListForm] = useState({
     code: "",
     name: "",
     description: "",
     isActive: true,
   });
-
-  // Assume isAdmin is available from somewhere, e.g., context or session
-  // For demonstration, setting it to true. Replace with actual logic.
-  const isAdmin = true;
 
   // Fetch next price list code
   const { data: nextCodeData } = useQuery({
@@ -171,7 +168,7 @@ export function PriceListManagement() {
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
     queryFn: async () => {
       if (selectedPriceLists.length === 0) return [];
-
+      
       const itemsPromises = selectedPriceLists.map(async (priceListId) => {
         const response = await apiRequest("GET", `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists/${priceListId}`);
         if (!response.ok) throw new Error("Failed to fetch price list items");
@@ -411,11 +408,11 @@ export function PriceListManagement() {
 
     // Get unique product IDs that exist in ANY selected price list
     const productIdsInPriceLists = new Set<number>();
-
+    
     priceListItemsData.forEach((item: PriceListItem) => {
       productIdsInPriceLists.add(item.productId);
     });
-
+    
     const result: ProductWithPrices[] = allProducts
       .filter((product: Product) => productIdsInPriceLists.has(product.id))
       .map((product: Product) => {
@@ -424,7 +421,7 @@ export function PriceListManagement() {
         // Get prices from price list items
         selectedPriceLists.forEach((priceListId) => {
           const item = priceListItemsData.find(
-            (i: PriceListItem) =>
+            (i: PriceListItem) => 
               i.priceListId === priceListId && i.productId === product.id
           );
           prices[priceListId] = item ? item.price : "";
@@ -484,7 +481,7 @@ export function PriceListManagement() {
     newPrice: string
   ) => {
     const key = `${priceListId}-${productId}`;
-
+    
     // Remove from editing state
     setEditingPrices((prev) => {
       const newState = { ...prev };
@@ -523,7 +520,7 @@ export function PriceListManagement() {
             productId,
             price: "0",
           });
-
+          
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.message || errorData.error || "Không thể thêm sản phẩm");
@@ -543,7 +540,7 @@ export function PriceListManagement() {
       await queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists] });
       await queryClient.refetchQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists] });
       await queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists"] });
-
+      
       setShowProductSelector(false);
       setSelectedProducts([]);
       toast({
@@ -688,11 +685,11 @@ export function PriceListManagement() {
 
         // Process rows
         const updates: Array<{ priceListId: number; productId: number; price: string }> = [];
-
+        
         for (let i = 1; i < jsonData.length; i++) {
           const row = jsonData[i];
           const sku = row[0]?.toString().trim();
-
+          
           if (!sku) continue;
 
           // Find product by SKU
@@ -807,16 +804,14 @@ export function PriceListManagement() {
       <div className="w-64 flex-shrink-0 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">{t("settings.priceLists")}</h3>
-          {isAdmin && (
-            <Button
-              size="sm"
-              onClick={() => setIsDialogOpen(true)}
-              className="h-8"
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              {t("settings.createNewPriceList")}
-            </Button>
-          )}
+          <Button
+            size="sm"
+            onClick={() => setIsDialogOpen(true)}
+            className="h-8"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            {t("settings.createNewPriceList")}
+          </Button>
         </div>
 
         <div className="space-y-2">
@@ -869,20 +864,18 @@ export function PriceListManagement() {
                       <path d="m15 5 4 4"/>
                     </svg>
                   </Button>
-                  {isAdmin && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(priceList);
-                      }}
-                      disabled={priceList.isDefault}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Trash2 className="w-4 h-4 text-red-500" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(priceList);
+                    }}
+                    disabled={priceList.isDefault}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </Button>
                 </div>
               </div>
             ))
@@ -918,16 +911,14 @@ export function PriceListManagement() {
                   ))}
                 </SelectContent>
               </Select>
-              {isAdmin && (
-                <Button
-                  onClick={() => setShowProductSelector(true)}
-                  disabled={selectedPriceLists.length === 0}
-                  className="whitespace-nowrap"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  {t("settings.addProductsToPriceList")}
-                </Button>
-              )}
+              <Button
+                onClick={() => setShowProductSelector(true)}
+                disabled={selectedPriceLists.length === 0}
+                className="whitespace-nowrap"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                {t("settings.addProductsToPriceList")}
+              </Button>
               <Button
                 onClick={handleExportExcel}
                 disabled={selectedPriceLists.length === 0 || filteredProducts.length === 0}
@@ -937,17 +928,15 @@ export function PriceListManagement() {
                 <FileDown className="w-4 h-4 mr-2" />
                 {t("settings.exportPriceList")}
               </Button>
-              {isAdmin && (
-                <Button
-                  onClick={() => setShowImportDialog(true)}
-                  disabled={selectedPriceLists.length === 0}
-                  variant="outline"
-                  className="whitespace-nowrap"
-                >
-                  <FileUp className="w-4 h-4 mr-2" />
-                  {t("settings.importPriceList")}
-                </Button>
-              )}
+              <Button
+                onClick={() => setShowImportDialog(true)}
+                disabled={selectedPriceLists.length === 0}
+                variant="outline"
+                className="whitespace-nowrap"
+              >
+                <FileUp className="w-4 h-4 mr-2" />
+                {t("settings.importPriceList")}
+              </Button>
             </div>
 
             {/* Products Table */}
@@ -970,9 +959,7 @@ export function PriceListManagement() {
                         </TableHead>
                       );
                     })}
-                    {isAdmin && (
-                      <TableHead className="w-24 text-center">{t("common.actions")}</TableHead>
-                    )}
+                    <TableHead className="w-24 text-center">{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1004,10 +991,10 @@ export function PriceListManagement() {
                         {selectedPriceLists.map((priceListId, colIndex) => {
                           const key = `${priceListId}-${product.id}`;
                           const editingValue = editingPrices[key];
-                          const currentValue = editingValue !== undefined
-                            ? editingValue
+                          const currentValue = editingValue !== undefined 
+                            ? editingValue 
                             : (product.prices[priceListId] || "");
-
+                          
                           return (
                             <TableCell key={priceListId} className="text-right">
                               <Input
@@ -1031,14 +1018,14 @@ export function PriceListManagement() {
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
                                     e.preventDefault();
-
+                                    
                                     // Save current value
                                     handlePriceSave(
                                       priceListId,
                                       product.id,
                                       e.currentTarget.value
                                     );
-
+                                    
                                     // Move to next cell
                                     const nextColIndex = colIndex + 1;
                                     if (nextColIndex < selectedPriceLists.length) {
@@ -1079,63 +1066,61 @@ export function PriceListManagement() {
                             </TableCell>
                           );
                         })}
-                        {isAdmin && (
-                          <TableCell className="text-center">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={async (e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              
+                              if (selectedPriceLists.length === 0) {
+                                toast({
+                                  title: "Lỗi",
+                                  description: "Vui lòng chọn bảng giá",
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
 
-                                if (selectedPriceLists.length === 0) {
-                                  toast({
-                                    title: "Lỗi",
-                                    description: "Vui lòng chọn bảng giá",
-                                    variant: "destructive",
+                              if (deleteProductFromPriceListMutation.isPending) {
+                                return;
+                              }
+
+                              try {
+                                let successCount = 0;
+                                for (const priceListId of selectedPriceLists) {
+                                  await deleteProductFromPriceListMutation.mutateAsync({
+                                    priceListId,
+                                    productId: product.id,
                                   });
-                                  return;
+                                  successCount++;
                                 }
+                                
+                                await queryClient.refetchQueries({ 
+                                  queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
+                                  exact: true 
+                                });
 
-                                if (deleteProductFromPriceListMutation.isPending) {
-                                  return;
-                                }
-
-                                try {
-                                  let successCount = 0;
-                                  for (const priceListId of selectedPriceLists) {
-                                    await deleteProductFromPriceListMutation.mutateAsync({
-                                      priceListId,
-                                      productId: product.id,
-                                    });
-                                    successCount++;
-                                  }
-
-                                  await queryClient.refetchQueries({
-                                    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
-                                    exact: true
-                                  });
-
-                                  toast({
-                                    title: "Thành công",
-                                    description: `Đã xóa sản phẩm khỏi ${successCount} bảng giá`,
-                                  });
-                                } catch (error) {
-                                  console.error('Error deleting product from price list:', error);
-                                  toast({
-                                    title: "Lỗi",
-                                    description: error instanceof Error ? error.message : "Không thể xóa sản phẩm",
-                                    variant: "destructive",
-                                  });
-                                }
-                              }}
-                              className="h-8 w-8 p-0 hover:bg-red-50"
-                              disabled={deleteProductFromPriceListMutation.isPending}
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </TableCell>
-                        )}
+                                toast({
+                                  title: "Thành công",
+                                  description: `Đã xóa sản phẩm khỏi ${successCount} bảng giá`,
+                                });
+                              } catch (error) {
+                                console.error('Error deleting product from price list:', error);
+                                toast({
+                                  title: "Lỗi",
+                                  description: error instanceof Error ? error.message : "Không thể xóa sản phẩm",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                            className="h-8 w-8 p-0 hover:bg-red-50"
+                            disabled={deleteProductFromPriceListMutation.isPending}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -1153,7 +1138,7 @@ export function PriceListManagement() {
                   </span>
                 )}
               </div>
-
+              
               {filteredProducts.length > 0 && (
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
@@ -1177,7 +1162,7 @@ export function PriceListManagement() {
                     </Select>
                     <span className="text-sm">{t("settings.productsCount")}</span>
                   </div>
-
+                  
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
@@ -1271,12 +1256,12 @@ export function PriceListManagement() {
                               const matchesCategory =
                                 selectedCategory === "all" ||
                                 product.categoryId.toString() === selectedCategory;
-
+                              
                               // Check if product is not already in selected price lists
                               const notInPriceList = !priceListItemsData.some(
                                 (item: PriceListItem) => item.productId === product.id
                               );
-
+                              
                               return matchesSearch && matchesCategory && notInPriceList;
                             });
                             setSelectedProducts(availableProducts.map((p: Product) => p.id));
@@ -1301,12 +1286,12 @@ export function PriceListManagement() {
                       const matchesCategory =
                         selectedCategory === "all" ||
                         product.categoryId.toString() === selectedCategory;
-
+                      
                       // Only show products not already in selected price lists
                       const notInPriceList = !priceListItemsData.some(
                         (item: PriceListItem) => item.productId === product.id
                       );
-
+                      
                       return matchesSearch && matchesCategory && notInPriceList;
                     })
                     .map((product: Product) => (
@@ -1341,12 +1326,12 @@ export function PriceListManagement() {
                     const matchesCategory =
                       selectedCategory === "all" ||
                       product.categoryId.toString() === selectedCategory;
-
+                    
                     // Only show products not already in selected price lists
                     const notInPriceList = !priceListItemsData.some(
                       (item: PriceListItem) => item.productId === product.id
                     );
-
+                    
                     return matchesSearch && matchesCategory && notInPriceList;
                   }).length === 0 && (
                     <TableRow>
@@ -1535,14 +1520,14 @@ export function PriceListManagement() {
               >
                 {t("common.cancel")}
               </Button>
-              <Button
-                type="submit"
+              <Button 
+                type="submit" 
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
-                {(createMutation.isPending || updateMutation.isPending)
-                  ? t("settings.savingPriceList")
-                  : editingPriceList
-                    ? t("settings.updatePriceList")
+                {(createMutation.isPending || updateMutation.isPending) 
+                  ? t("settings.savingPriceList") 
+                  : editingPriceList 
+                    ? t("settings.updatePriceList") 
                     : t("settings.createPriceList")}
               </Button>
             </DialogFooter>
