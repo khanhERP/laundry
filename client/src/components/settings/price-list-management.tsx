@@ -125,9 +125,9 @@ export function PriceListManagement() {
 
   // Fetch next price list code
   const { data: nextCodeData } = useQuery({
-    queryKey: ["/api/price-lists/next-code"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists/next-code"],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/price-lists/next-code");
+      const response = await apiRequest("GET", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists/next-code");
       if (!response.ok) throw new Error("Failed to fetch next code");
       return response.json();
     },
@@ -138,9 +138,9 @@ export function PriceListManagement() {
 
   // Fetch price lists
   const { data: priceLists = [], isLoading: priceListsLoading } = useQuery({
-    queryKey: ["/api/price-lists"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists"],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/price-lists");
+      const response = await apiRequest("GET", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists");
       if (!response.ok) throw new Error("Failed to fetch price lists");
       return response.json();
     },
@@ -148,9 +148,9 @@ export function PriceListManagement() {
 
   // Fetch all products for search/selection
   const { data: allProducts = [] } = useQuery({
-    queryKey: ["/api/products"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products"],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/products");
+      const response = await apiRequest("GET", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products");
       if (!response.ok) throw new Error("Failed to fetch products");
       return response.json();
     },
@@ -158,9 +158,9 @@ export function PriceListManagement() {
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
-    queryKey: ["/api/categories"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/categories"],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/categories");
+      const response = await apiRequest("GET", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/categories");
       if (!response.ok) throw new Error("Failed to fetch categories");
       return response.json();
     },
@@ -168,12 +168,12 @@ export function PriceListManagement() {
 
   // Fetch price list items for selected price lists
   const { data: priceListItemsData = [] } = useQuery({
-    queryKey: ["/api/price-list-items", selectedPriceLists],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
     queryFn: async () => {
       if (selectedPriceLists.length === 0) return [];
 
       const itemsPromises = selectedPriceLists.map(async (priceListId) => {
-        const response = await apiRequest("GET", `/api/price-lists/${priceListId}`);
+        const response = await apiRequest("GET", `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists/${priceListId}`);
         if (!response.ok) throw new Error("Failed to fetch price list items");
         const data = await response.json();
         return data.items || [];
@@ -188,7 +188,7 @@ export function PriceListManagement() {
   // Create mutation
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/price-lists", data);
+      const response = await apiRequest("POST", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists", data);
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to create price list");
@@ -196,7 +196,7 @@ export function PriceListManagement() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/price-lists"] });
+      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists"] });
       toast({
         title: "Thành công",
         description: "Tạo bảng giá thành công",
@@ -215,7 +215,7 @@ export function PriceListManagement() {
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      const response = await apiRequest("PUT", `/api/price-lists/${id}`, data);
+      const response = await apiRequest("PUT", `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists/${id}`, data);
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to update price list");
@@ -223,7 +223,7 @@ export function PriceListManagement() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/price-lists"] });
+      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists"] });
       toast({
         title: "Thành công",
         description: "Cập nhật bảng giá thành công",
@@ -242,7 +242,7 @@ export function PriceListManagement() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiRequest("DELETE", `/api/price-lists/${id}`);
+      const response = await apiRequest("DELETE", `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists/${id}`);
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || "Failed to delete price list");
@@ -250,7 +250,7 @@ export function PriceListManagement() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/price-lists"] });
+      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists"] });
       toast({
         title: "Thành công",
         description: "Xóa bảng giá thành công",
@@ -276,7 +276,7 @@ export function PriceListManagement() {
       productId: number;
       price: string;
     }) => {
-      const response = await apiRequest("POST", "/api/price-list-items", {
+      const response = await apiRequest("POST", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", {
         priceListId,
         productId,
         price,
@@ -285,7 +285,7 @@ export function PriceListManagement() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/price-list-items"] });
+      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items"] });
       toast({
         title: "Thành công",
         description: "Cập nhật giá thành công",
@@ -310,7 +310,7 @@ export function PriceListManagement() {
       productId: number;
     }) => {
       console.log(`🗑️ Deleting product ${productId} from price list ${priceListId}`);
-      const response = await apiRequest("DELETE", `/api/price-list-items/${priceListId}/${productId}`);
+      const response = await apiRequest("DELETE", `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items/${priceListId}/${productId}`);
       if (!response.ok) {
         const error = await response.json().catch(() => ({ message: "Không thể xóa sản phẩm" }));
         throw new Error(error.message || error.error || "Không thể xóa sản phẩm");
@@ -518,7 +518,7 @@ export function PriceListManagement() {
             throw new Error(`Không tìm thấy sản phẩm ID ${productId}`);
           }
 
-          const response = await apiRequest("POST", "/api/price-list-items", {
+          const response = await apiRequest("POST", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", {
             priceListId,
             productId,
             price: "0",
@@ -540,9 +540,9 @@ export function PriceListManagement() {
     },
     onSuccess: async () => {
       // Invalidate and refetch price list items with selected price lists
-      await queryClient.invalidateQueries({ queryKey: ["/api/price-list-items", selectedPriceLists] });
-      await queryClient.refetchQueries({ queryKey: ["/api/price-list-items", selectedPriceLists] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/price-lists"] });
+      await queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists] });
+      await queryClient.refetchQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists] });
+      await queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists"] });
 
       setShowProductSelector(false);
       setSelectedProducts([]);
@@ -733,7 +733,7 @@ export function PriceListManagement() {
 
         for (const update of updates) {
           try {
-            await apiRequest("POST", "/api/price-list-items", update);
+            await apiRequest("POST", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", update);
             successCount++;
           } catch (error) {
             errorCount++;
@@ -741,8 +741,8 @@ export function PriceListManagement() {
           }
         }
 
-        await queryClient.invalidateQueries({ queryKey: ["/api/price-list-items", selectedPriceLists] });
-        await queryClient.refetchQueries({ queryKey: ["/api/price-list-items", selectedPriceLists] });
+        await queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists] });
+        await queryClient.refetchQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists] });
 
         toast({
           title: "Thành công",
@@ -1112,7 +1112,7 @@ export function PriceListManagement() {
                                   }
 
                                   await queryClient.refetchQueries({
-                                    queryKey: ["/api/price-list-items", selectedPriceLists],
+                                    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
                                     exact: true
                                   });
 

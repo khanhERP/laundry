@@ -70,10 +70,10 @@ export function DashboardOverview() {
 
   // Fetch stores for filtering
   const { data: storesData = [] } = useQuery({
-    queryKey: ["/api/store-settings/list"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list"],
     queryFn: async () => {
       try {
-        const response = await fetch("/api/store-settings/list");
+        const response = await fetch("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list");
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -93,11 +93,11 @@ export function DashboardOverview() {
     isLoading: ordersLoading,
     error: ordersError,
   } = useQuery({
-    queryKey: ["/api/orders/date-range", startDate, endDate, "all", storeFilter],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range", startDate, endDate, "all", storeFilter],
     queryFn: async () => {
       try {
         const response = await fetch(
-          `/api/orders/date-range/${startDate}/${endDate}/all`,
+          `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range/${startDate}/${endDate}/all`,
         );
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -117,10 +117,10 @@ export function DashboardOverview() {
 
   // Query order items for all orders
   const { data: orderItems = [], isLoading: orderItemsLoading } = useQuery({
-    queryKey: ["/api/order-items"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/order-items"],
     queryFn: async () => {
       try {
-        const response = await fetch("/api/order-items");
+        const response = await fetch("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/order-items");
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -138,17 +138,17 @@ export function DashboardOverview() {
   });
 
   const { data: tables } = useQuery({
-    queryKey: ["/api/tables"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/tables"],
   });
 
   const handleRefresh = () => {
     // Refresh the queries to get the latest data for the selected date
     setStartDate(formatDateToYYYYMMDD(new Date()));
     setEndDate(formatDateToYYYYMMDD(new Date()));
-    queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/orders/date-range"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/order-items"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/tables"] });
+    queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders"] });
+    queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range"] });
+    queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/order-items"] });
+    queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/tables"] });
   };
 
   const getDashboardStats = () => {
@@ -354,10 +354,10 @@ export function DashboardOverview() {
 
   // Get all current orders to check active ones (not date-filtered)
   const { data: allCurrentOrders = [] } = useQuery({
-    queryKey: ["/api/orders"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders"],
     queryFn: async () => {
       try {
-        const response = await fetch("/api/orders");
+        const response = await fetch("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders");
         if (!response.ok)
           throw new Error(`HTTP error! status: ${response.status}`);
         return await response.json();

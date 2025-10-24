@@ -72,11 +72,11 @@ export function SupplierFormModal({ isOpen, onClose, supplier }: SupplierFormMod
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertSupplier) => {
-      const response = await apiRequest('POST', '/api/suppliers', data);
+      const response = await apiRequest('POST', 'https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/suppliers', data);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/suppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/suppliers'] });
       toast({
         title: t("common.successTitle"),
         description: t("suppliers.createSuccess"),
@@ -94,11 +94,11 @@ export function SupplierFormModal({ isOpen, onClose, supplier }: SupplierFormMod
 
   const updateMutation = useMutation({
     mutationFn: async (data: Partial<InsertSupplier>) => {
-      const response = await apiRequest('PUT', `/api/suppliers/${supplier!.id}`, data);
+      const response = await apiRequest('PUT', `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/suppliers/${supplier!.id}`, data);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/suppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/suppliers'] });
       toast({
         title: t("common.successTitle"),
         description: t("suppliers.updateSuccess"),

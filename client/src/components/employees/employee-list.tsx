@@ -19,7 +19,7 @@ export function EmployeeList() {
   const { t } = useTranslation();
 
   const { data: employeesData, isLoading } = useQuery<Employee[]>({
-    queryKey: ['/api/employees'],
+    queryKey: ['https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/employees'],
   });
 
   // Sort employees by ID descending (newest first)
@@ -27,11 +27,11 @@ export function EmployeeList() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiRequest('DELETE', `/api/employees/${id}`);
+      const response = await apiRequest('DELETE', `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/employees/${id}`);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
+      queryClient.invalidateQueries({ queryKey: ['https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/employees'] });
       toast({
         title: t('common.success'),
         description: t('employees.deleteSuccess'),

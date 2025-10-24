@@ -53,10 +53,7 @@ export default function POS({ onLogout }: POSPageProps) {
         const isCustomDomain = !host.includes("replit.dev");
 
         // For custom domains, ensure proper WebSocket URL
-        const wsUrl =
-          isCustomDomain && protocol === "wss:"
-            ? `wss://${host}/ws`
-            : `${protocol}//${host}/ws`;
+        const wsUrl = `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/ws`;
 
         console.log(
           `📡 POS: Connecting to WebSocket at ${wsUrl}, Custom domain: ${isCustomDomain}`,
@@ -93,10 +90,10 @@ export default function POS({ onLogout }: POSPageProps) {
 
               // Clear cache and force refresh
               queryClient.clear();
-              queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-              queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+              queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products"] });
+              queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/categories"] });
               queryClient.invalidateQueries({
-                queryKey: ["/api/store-settings"],
+                queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings"],
               });
 
               // Dispatch custom events for components
@@ -141,9 +138,9 @@ export default function POS({ onLogout }: POSPageProps) {
 
       // Force data refresh for any e-invoice related events
       queryClient.clear();
-      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/store-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings"] });
 
       // Dispatch refresh event for components
       window.dispatchEvent(
@@ -354,7 +351,7 @@ export default function POS({ onLogout }: POSPageProps) {
               try {
                 const protocol =
                   window.location.protocol === "https:" ? "wss:" : "ws:";
-                const wsUrl = `${protocol}//${window.location.host}/ws`;
+                const wsUrl = `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/ws`;
                 const ws = new WebSocket(wsUrl);
 
                 ws.onopen = () => {

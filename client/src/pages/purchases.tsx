@@ -100,7 +100,7 @@ export default function PurchasesPage({ onLogout }: PurchasesPageProps) {
     isLoading: isOrdersLoading,
   } = useQuery<{ data: PurchaseOrder[]; success: boolean; message: string }>({
     queryKey: [
-      "/api/purchase-receipts",
+      "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/purchase-receipts",
       {
         startDate,
         endDate,
@@ -132,7 +132,7 @@ export default function PurchasesPage({ onLogout }: PurchasesPageProps) {
         console.log("🔍 Adding PO number search:", poNumberFilter.trim());
       }
 
-      const url = `/api/purchase-receipts${params.toString() ? `?${params.toString()}` : ""}`;
+      const url = `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/purchase-receipts${params.toString() ? `?${params.toString()}` : ""}`;
       console.log("🔍 Fetching purchase receipts with filters:", url);
 
       const response = await fetch(url);
@@ -168,15 +168,15 @@ export default function PurchasesPage({ onLogout }: PurchasesPageProps) {
 
   // Fetch suppliers for filtering
   const { data: suppliers = [] } = useQuery<Supplier[]>({
-    queryKey: ["/api/suppliers"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/suppliers"],
   });
 
   // Fetch stores for filtering
   const { data: storesData = [] } = useQuery({
-    queryKey: ["/api/store-settings/list"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list"],
     queryFn: async () => {
       try {
-        const response = await fetch("/api/store-settings/list");
+        const response = await fetch("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list");
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -192,9 +192,9 @@ export default function PurchasesPage({ onLogout }: PurchasesPageProps) {
 
   // Fetch payment methods
   const { data: paymentMethodsData } = useQuery({
-    queryKey: ["/api/payment-methods"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/payment-methods"],
     queryFn: async () => {
-      const response = await fetch("/api/payment-methods");
+      const response = await fetch("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/payment-methods");
       return response.json();
     },
   });
@@ -308,7 +308,7 @@ export default function PurchasesPage({ onLogout }: PurchasesPageProps) {
   // Bulk delete mutation
   const bulkDeleteMutation = useMutation({
     mutationFn: async (orderIds: number[]) => {
-      return apiRequest("POST", "/api/purchase-receipts/bulk-delete", {
+      return apiRequest("POST", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/purchase-receipts/bulk-delete", {
         orderIds,
       });
     },
@@ -325,7 +325,7 @@ export default function PurchasesPage({ onLogout }: PurchasesPageProps) {
       setSelectedOrders(new Set());
 
       // Refetch purchase receipts
-      queryClient.invalidateQueries({ queryKey: ["/api/purchase-receipts"] });
+      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/purchase-receipts"] });
 
       // Close dialog
       setShowDeleteDialog(false);

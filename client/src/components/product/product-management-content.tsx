@@ -21,11 +21,11 @@ export default function ProductManagementContent() {
   const [productSearchTerm, setProductSearchTerm] = useState("");
 
   const { data: productsData, isLoading: productsLoading } = useQuery<Product[]>({
-    queryKey: ["/api/products"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products"],
   });
 
   const { data: categoriesData } = useQuery<Category[]>({
-    queryKey: ["/api/categories"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/categories"],
   });
 
   const filteredProducts = productsData?.filter((product: Product) =>

@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { defaultFetcher } from "./utils";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -31,7 +32,7 @@ export async function apiRequest(
     config.body = JSON.stringify(data);
 
     // Additional logging for payment method requests
-    if (url.includes("/api/orders/") && url.includes("/status") && method === "PUT") {
+    if (url.includes("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/") && url.includes("/status") && method === "PUT") {
       console.log("🔍 apiRequest: Final request body for payment:", {
         url,
         requestBodyString: JSON.stringify(data),
@@ -86,7 +87,8 @@ export const getQueryFn: <T>(options: {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
+      queryFn: defaultFetcher, // 👈 set mặc định ở đây
+      // queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: true,
       staleTime: 0, // No cache

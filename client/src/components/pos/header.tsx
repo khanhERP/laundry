@@ -68,20 +68,20 @@ export function POSHeader({ onLogout }: POSHeaderProps) {
 
   // Fetch store settings
   const { data: storeSettings } = useQuery<StoreSettings>({
-    queryKey: ["/api/store-settings"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings"],
   });
 
   // Fetch employees
   const { data: employees } = useQuery<Employee[]>({
-    queryKey: ["/api/employees"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/employees"],
   });
 
   // Fetch today's attendance records
   const todayDate = new Date().toISOString().split("T")[0];
   const { data: todayAttendance } = useQuery<AttendanceRecord[]>({
-    queryKey: ["/api/attendance", todayDate],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/attendance", todayDate],
     queryFn: async () => {
-      const response = await fetch(`/api/attendance?date=${todayDate}`);
+      const response = await fetch(`https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/attendance?date=${todayDate}`);
       if (!response.ok) {
         throw new Error("Failed to fetch attendance records");
       }
@@ -186,7 +186,7 @@ export function POSHeader({ onLogout }: POSHeaderProps) {
   const handleLogout = async () => {
     try {
       // Gọi API logout để xóa session phía server
-      await fetch("/api/auth/logout", {
+      await fetch("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/auth/logout", {
         method: "POST",
         credentials: "include",
       });

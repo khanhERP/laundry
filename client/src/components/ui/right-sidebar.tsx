@@ -40,9 +40,9 @@ export function RightSidebar() {
 
   // Query store settings to get business type
   const { data: storeSettings } = useQuery({
-    queryKey: ["/api/store-settings"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings"],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/store-settings");
+      const response = await apiRequest("GET", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings");
       return response.json();
     },
   });
@@ -222,7 +222,7 @@ export function RightSidebar() {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-200 bg-green-50">
           <div className="text-sm text-gray-500 text-center">
             <div className="font-medium">EDPOS System</div>
-            <div className="text-xs opacity-75">v1.0.0</div>
+            <div className="text-xs opacity-75">24/10/2025</div>
           </div>
         </div>
       )}

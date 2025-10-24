@@ -93,9 +93,9 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
 
   // Fetch store settings to get user info
   const { data: storeSettings } = useQuery({
-    queryKey: ["/api/store-settings"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings"],
     queryFn: async () => {
-      const response = await fetch("/api/store-settings");
+      const response = await fetch("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings");
       if (!response.ok) throw new Error("Failed to fetch store settings");
       return response.json();
     },
@@ -103,10 +103,10 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
 
   // Fetch stores list for filter dropdown
   const { data: storesData = [] } = useQuery({
-    queryKey: ["/api/store-settings/list"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list"],
     queryFn: async () => {
       try {
-        const response = await fetch("/api/store-settings/list");
+        const response = await fetch("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list");
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -123,7 +123,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
 
   // Fetch orders with authentication-based filtering for overview tab
   const { data: ordersData } = useQuery({
-    queryKey: ["/api/orders/list", startDate, endDate, storeFilter],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/list", startDate, endDate, storeFilter],
     queryFn: async () => {
       const params = new URLSearchParams({
         startDate,
@@ -140,10 +140,10 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
         startDate,
         endDate,
         storeFilter,
-        url: `/api/orders/list?${params}`,
+        url: `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/list?${params}`,
       });
 
-      const response = await fetch(`/api/orders/list?${params}`);
+      const response = await fetch(`https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/list?${params}`);
       if (!response.ok) throw new Error("Failed to fetch orders");
       const data = await response.json();
 

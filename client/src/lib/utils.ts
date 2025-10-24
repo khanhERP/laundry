@@ -4,3 +4,33 @@ import { twMerge } from "tailwind-merge"
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
+const BASE_URL = "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev"; // 👈 đổi theo domain backend của bạn
+
+export async function defaultFetcher({ queryKey }) {
+  const [path] = queryKey;
+
+  // Cho phép truyền cả path hoặc URL đầy đủ
+  const url = path.startsWith("http") ? path : `${BASE_URL}${path}`;
+  const token = localStorage.getItem("token");
+
+  const res = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: "include", // nếu dùng cookie, giữ nguyên
+  });
+
+  // Xử lý token hết hạn hoặc lỗi xác thực
+  if (res.status === 401) {
+    console.warn("Token hết hạn hoặc không hợp lệ");
+    localStorage.removeItem("token");
+    window.location.href = "/";
+    return;
+  }
+
+  if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
+
+  return res.json();
+}

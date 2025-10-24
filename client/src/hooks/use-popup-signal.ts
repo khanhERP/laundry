@@ -63,7 +63,7 @@ export function usePopupSignal() {
   }, []);
 
   const sendPopupClose = (success: boolean) => {
-    fetch('/api/popup/close', {
+    fetch('https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/popup/close', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

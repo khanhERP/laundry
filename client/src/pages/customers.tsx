@@ -36,7 +36,7 @@ export default function CustomersPage({ onLogout }: CustomersPageProps) {
 
   // Fetch customers
   const { data: customersData, isLoading: customersLoading } = useQuery<Customer[]>({
-    queryKey: ["/api/customers"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers"],
   });
 
   const handleEditCustomer = (customer: Customer) => {
@@ -48,7 +48,7 @@ export default function CustomersPage({ onLogout }: CustomersPageProps) {
     if (!confirm(t("customers.confirmDelete"))) return;
 
     try {
-      const response = await fetch(`/api/customers/${customerId}`, {
+      const response = await fetch(`https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers/${customerId}`, {
         method: "DELETE",
       });
 
@@ -56,7 +56,7 @@ export default function CustomersPage({ onLogout }: CustomersPageProps) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      await queryClient.refetchQueries({ queryKey: ["/api/customers"] });
+      await queryClient.refetchQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers"] });
 
       toast({
         title: t("common.success"),

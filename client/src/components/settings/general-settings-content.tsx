@@ -22,13 +22,13 @@ export function GeneralSettingsContent() {
 
   // Fetch general settings
   const { data: settings = [], isLoading } = useQuery<GeneralSetting[]>({
-    queryKey: ["/api/general-settings"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/general-settings"],
   });
 
   // Update setting active status
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
-      const response = await fetch(`/api/general-settings/${id}`, {
+      const response = await fetch(`https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/general-settings/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive }),
@@ -38,7 +38,7 @@ export function GeneralSettingsContent() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/general-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/general-settings"] });
       toast({
         title: "Thành công",
         description: "Đã cập nhật trạng thái thiết lập",
