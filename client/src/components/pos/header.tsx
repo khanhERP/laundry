@@ -194,18 +194,27 @@ export function POSHeader({ onLogout }: POSHeaderProps) {
       console.error("Logout API error:", error);
     }
     
-    // Xóa tất cả thông tin đăng nhập
-    sessionStorage.removeItem("pinAuthenticated");
-    localStorage.removeItem("token");
-    localStorage.removeItem("userInfo");
-    localStorage.removeItem("authToken");
+    // Xóa toàn bộ localStorage
+    localStorage.clear();
     
-    // Xóa cookies
+    // Xóa toàn bộ sessionStorage
+    sessionStorage.clear();
+    
+    // Xóa tất cả cookies
     document.cookie.split(";").forEach((c) => {
       document.cookie = c
         .replace(/^ +/, "")
         .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
     });
+    
+    // Xóa cache của browser (nếu có API hỗ trợ)
+    if ('caches' in window) {
+      caches.keys().then((names) => {
+        names.forEach((name) => {
+          caches.delete(name);
+        });
+      });
+    }
     
     // Gọi callback onLogout nếu có
     if (onLogout) {
