@@ -1,0 +1,1554 @@
+import { useState, useMemo, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useTranslation } from "@/lib/i18n";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Plus, Search, Trash2, Check, X, FileDown, FileUp } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useEffect } from "react";
+import * as XLSX from "xlsx";
+
+// Helper function to format currency
+const formatCurrency = (value: string | number): string => {
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(numValue)) return '0';
+  // Format: dấu phẩy (,) ngăn cách hàng nghìn, dấu chấm (.) ngăn cách thập phân
+  return numValue.toLocaleString('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).replace(/,/g, ','); // Giữ dấu phẩy cho hàng nghìn
+};
+
+interface PriceList {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  isDefault: boolean;
+  validFrom?: string;
+  validTo?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface PriceListItem {
+  id?: number;
+  priceListId: number;
+  productId: number;
+  price: string;
+}
+
+interface Product {
+  id: number;
+  name: string;
+  sku: string;
+  price: string;
+  categoryId: number;
+  categoryName?: string;
+}
+
+interface Category {
+  id: number;
+  name: string;
+  icon: string;
+}
+
+interface ProductWithPrices extends Product {
+  prices: { [priceListId: number]: string };
+}
+
+export function PriceListManagement() {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedPriceLists, setSelectedPriceLists] = useState<number[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
+  const [showProductSelector, setShowProductSelector] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [priceListToDelete, setPriceListToDelete] = useState<PriceList | null>(null);
+  const [editingPriceList, setEditingPriceList] = useState<PriceList | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [editingPrices, setEditingPrices] = useState({
+    [key: string]: string;
+  });
+  const [priceListForm, setPriceListForm] = useState({
+    code: "",
+    name: "",
+    description: "",
+    isActive: true,
+  });
+
+  // Assume isAdmin is available from somewhere, e.g., context or session
+  // For demonstration, setting it to true. Replace with actual logic.
+  const isAdmin = true;
+
+  // Fetch next price list code
+  const { data: nextCodeData } = useQuery({
+    queryKey: ["/api/price-lists/next-code"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/price-lists/next-code");
+      if (!response.ok) throw new Error("Failed to fetch next code");
+      return response.json();
+    },
+    enabled: isDialogOpen && !editingPriceList,
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
+  // Fetch price lists
+  const { data: priceLists = [], isLoading: priceListsLoading } = useQuery({
+    queryKey: ["/api/price-lists"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/price-lists");
+      if (!response.ok) throw new Error("Failed to fetch price lists");
+      return response.json();
+    },
+  });
+
+  // Fetch all products for search/selection
+  const { data: allProducts = [] } = useQuery({
+    queryKey: ["/api/products"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/products");
+      if (!response.ok) throw new Error("Failed to fetch products");
+      return response.json();
+    },
+  });
+
+  // Fetch categories
+  const { data: categories = [] } = useQuery({
+    queryKey: ["/api/categories"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/categories");
+      if (!response.ok) throw new Error("Failed to fetch categories");
+      return response.json();
+    },
+  });
+
+  // Fetch price list items for selected price lists
+  const { data: priceListItemsData = [] } = useQuery({
+    queryKey: ["/api/price-list-items", selectedPriceLists],
+    queryFn: async () => {
+      if (selectedPriceLists.length === 0) return [];
+
+      const itemsPromises = selectedPriceLists.map(async (priceListId) => {
+        const response = await apiRequest("GET", `/api/price-lists/${priceListId}`);
+        if (!response.ok) throw new Error("Failed to fetch price list items");
+        const data = await response.json();
+        return data.items || [];
+      });
+
+      const allItems = await Promise.all(itemsPromises);
+      return allItems.flat();
+    },
+    enabled: selectedPriceLists.length > 0,
+  });
+
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", "/api/price-lists", data);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to create price list");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/price-lists"] });
+      toast({
+        title: "Thành công",
+        description: "Tạo bảng giá thành công",
+      });
+      handleCloseDialog();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Lỗi",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const response = await apiRequest("PUT", `/api/price-lists/${id}`, data);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update price list");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/price-lists"] });
+      toast({
+        title: "Thành công",
+        description: "Cập nhật bảng giá thành công",
+      });
+      handleCloseDialog();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Lỗi",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("DELETE", `/api/price-lists/${id}`);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete price list");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/price-lists"] });
+      toast({
+        title: "Thành công",
+        description: "Xóa bảng giá thành công",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Lỗi",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update price mutation
+  const updatePriceMutation = useMutation({
+    mutationFn: async ({
+      priceListId,
+      productId,
+      price,
+    }: {
+      priceListId: number;
+      productId: number;
+      price: string;
+    }) => {
+      const response = await apiRequest("POST", "/api/price-list-items", {
+        priceListId,
+        productId,
+        price,
+      });
+      if (!response.ok) throw new Error("Failed to update price");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/price-list-items"] });
+      toast({
+        title: "Thành công",
+        description: "Cập nhật giá thành công",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Lỗi",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete product from price list mutation
+  const deleteProductFromPriceListMutation = useMutation({
+    mutationFn: async ({
+      priceListId,
+      productId,
+    }: {
+      priceListId: number;
+      productId: number;
+    }) => {
+      console.log(`🗑️ Deleting product ${productId} from price list ${priceListId}`);
+      const response = await apiRequest("DELETE", `/api/price-list-items/${priceListId}/${productId}`);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: "Không thể xóa sản phẩm" }));
+        throw new Error(error.message || error.error || "Không thể xóa sản phẩm");
+      }
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      console.log(`✅ Product ${variables.productId} deleted from price list ${variables.priceListId}`);
+    },
+    onError: (error: Error) => {
+      console.error("❌ Delete mutation error:", error);
+    },
+  });
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setEditingPriceList(null);
+    setPriceListForm({
+      code: "",
+      name: "",
+      description: "",
+      isActive: true,
+    });
+  };
+
+  // Auto-fill code when creating new price list
+  useEffect(() => {
+    if (isDialogOpen && !editingPriceList && nextCodeData?.code) {
+      setPriceListForm(prev => ({
+        ...prev,
+        code: nextCodeData.code,
+      }));
+    }
+  }, [isDialogOpen, editingPriceList, nextCodeData]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!priceListForm.code || !priceListForm.name) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng nhập đầy đủ mã và tên bảng giá",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (editingPriceList) {
+      // Update existing price list
+      updateMutation.mutate({
+        id: editingPriceList.id,
+        data: priceListForm,
+      });
+    } else {
+      // Create price list without any products initially
+      createMutation.mutate({
+        ...priceListForm,
+        items: [],
+      });
+    }
+  };
+
+  const handleEdit = (priceList: PriceList) => {
+    setEditingPriceList(priceList);
+    setPriceListForm({
+      code: priceList.code,
+      name: priceList.name,
+      description: priceList.description || "",
+      isActive: priceList.isActive,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = (priceList: PriceList) => {
+    setPriceListToDelete(priceList);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = () => {
+    if (priceListToDelete) {
+      deleteMutation.mutate(priceListToDelete.id);
+      setShowDeleteDialog(false);
+      setPriceListToDelete(null);
+    }
+  };
+
+  const togglePriceListSelection = (id: number) => {
+    setSelectedPriceLists((prev) =>
+      prev.includes(id) ? prev.filter((plId) => plId !== id) : [...prev, id]
+    );
+  };
+
+  // Build products with prices - only show products that have been explicitly added
+  const productsWithPrices = useMemo(() => {
+    if (selectedPriceLists.length === 0) {
+      return [];
+    }
+
+    // Get unique product IDs that exist in ANY selected price list
+    const productIdsInPriceLists = new Set<number>();
+
+    priceListItemsData.forEach((item: PriceListItem) => {
+      productIdsInPriceLists.add(item.productId);
+    });
+
+    const result: ProductWithPrices[] = allProducts
+      .filter((product: Product) => productIdsInPriceLists.has(product.id))
+      .map((product: Product) => {
+        const prices: { [priceListId: number]: string } = {};
+
+        // Get prices from price list items
+        selectedPriceLists.forEach((priceListId) => {
+          const item = priceListItemsData.find(
+            (i: PriceListItem) =>
+              i.priceListId === priceListId && i.productId === product.id
+          );
+          prices[priceListId] = item ? item.price : "";
+        });
+
+        return {
+          ...product,
+          prices,
+        };
+      });
+
+    return result;
+  }, [allProducts, selectedPriceLists, priceListItemsData]);
+
+  // Filter products
+  const filteredProducts = useMemo(() => {
+    return productsWithPrices.filter((product) => {
+      const matchesSearch =
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory =
+        selectedCategory === "all" ||
+        product.categoryId.toString() === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [productsWithPrices, searchTerm, selectedCategory]);
+
+  // Paginated products
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredProducts.slice(startIndex, endIndex);
+  }, [filteredProducts, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredProducts.length / pageSize);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, selectedPriceLists]);
+
+  const handlePriceInputChange = (
+    priceListId: number,
+    productId: number,
+    value: string
+  ) => {
+    const key = `${priceListId}-${productId}`;
+    setEditingPrices((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const handlePriceSave = (
+    priceListId: number,
+    productId: number,
+    newPrice: string
+  ) => {
+    const key = `${priceListId}-${productId}`;
+
+    // Remove from editing state
+    setEditingPrices((prev) => {
+      const newState = { ...prev };
+      delete newState[key];
+      return newState;
+    });
+
+    // Only save if there's a valid price
+    if (newPrice && newPrice.trim() !== "") {
+      updatePriceMutation.mutate({
+        priceListId,
+        productId,
+        price: newPrice,
+      });
+    }
+  };
+
+  // Add products to price list mutation
+  const addProductsMutation = useMutation({
+    mutationFn: async (productIds: number[]) => {
+      if (selectedPriceLists.length === 0) {
+        throw new Error("Vui lòng chọn bảng giá trước");
+      }
+
+      const priceListId = selectedPriceLists[0]; // Add to first selected price list
+
+      try {
+        const promises = productIds.map(async (productId) => {
+          const prod = allProducts.find((p: Product) => p.id === productId);
+          if (!prod) {
+            throw new Error(`Không tìm thấy sản phẩm ID ${productId}`);
+          }
+
+          const response = await apiRequest("POST", "/api/price-list-items", {
+            priceListId,
+            productId,
+            price: "0",
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || errorData.error || "Không thể thêm sản phẩm");
+          }
+          return response.json();
+        });
+
+        const results = await Promise.all(promises);
+        return results;
+      } catch (error) {
+        console.error("Error adding products:", error);
+        throw error;
+      }
+    },
+    onSuccess: async () => {
+      // Invalidate and refetch price list items with selected price lists
+      await queryClient.invalidateQueries({ queryKey: ["/api/price-list-items", selectedPriceLists] });
+      await queryClient.refetchQueries({ queryKey: ["/api/price-list-items", selectedPriceLists] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/price-lists"] });
+
+      setShowProductSelector(false);
+      setSelectedProducts([]);
+      toast({
+        title: "Thành công",
+        description: "Thêm sản phẩm vào bảng giá thành công",
+      });
+    },
+    onError: (error: Error) => {
+      console.error("Add products mutation error:", error);
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể thêm sản phẩm vào bảng giá",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAddProducts = () => {
+    if (selectedProducts.length === 0) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng chọn ít nhất một sản phẩm",
+        variant: "destructive",
+      });
+      return;
+    }
+    addProductsMutation.mutate(selectedProducts);
+  };
+
+  // Export to Excel
+  const handleExportExcel = () => {
+    if (selectedPriceLists.length === 0) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng chọn bảng giá để xuất",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (filteredProducts.length === 0) {
+      toast({
+        title: "Lỗi",
+        description: "Không có sản phẩm để xuất",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Prepare data for export
+    const exportData = [
+      [
+        "Mã hàng",
+        "Tên hàng",
+        "Nhóm hàng",
+        ...selectedPriceLists.map((plId) => {
+          const pl = priceLists.find((p: PriceList) => p.id === plId);
+          return pl?.name || `Bảng giá ${plId}`;
+        }),
+      ],
+    ];
+
+    filteredProducts.forEach((product) => {
+      const row = [
+        product.sku,
+        product.name,
+        categories.find((c: Category) => c.id === product.categoryId)?.name || "",
+        ...selectedPriceLists.map((plId) => product.prices[plId] || ""),
+      ];
+      exportData.push(row);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(exportData);
+
+    // Auto-fit column widths
+    const colWidths = [
+      { wch: 15 }, // Mã hàng
+      { wch: 40 }, // Tên hàng
+      { wch: 20 }, // Nhóm hàng
+      ...selectedPriceLists.map(() => ({ wch: 15 })), // Price columns
+    ];
+    ws["!cols"] = colWidths;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Bảng giá");
+
+    const priceListNames = selectedPriceLists
+      .map((plId) => priceLists.find((p: PriceList) => p.id === plId)?.code)
+      .join("_");
+    const timestamp = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `bang_gia_${priceListNames}_${timestamp}.xlsx`);
+
+    toast({
+      title: "Thành công",
+      description: "Đã xuất file Excel thành công",
+    });
+  };
+
+  // Import from Excel
+  const handleImportExcel = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (selectedPriceLists.length === 0) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng chọn bảng giá trước khi import",
+        variant: "destructive",
+      });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+
+        if (jsonData.length < 2) {
+          throw new Error("File Excel không có dữ liệu");
+        }
+
+        const headers = jsonData[0];
+        const priceListColumns: { [key: number]: number } = {};
+
+        // Map price list names to column indexes
+        selectedPriceLists.forEach((plId) => {
+          const pl = priceLists.find((p: PriceList) => p.id === plId);
+          if (pl) {
+            const colIndex = headers.findIndex((h) => h === pl.name);
+            if (colIndex !== -1) {
+              priceListColumns[plId] = colIndex;
+            }
+          }
+        });
+
+        // Process rows
+        const updates: Array<{ priceListId: number; productId: number; price: string }> = [];
+
+        for (let i = 1; i < jsonData.length; i++) {
+          const row = jsonData[i];
+          const sku = row[0]?.toString().trim();
+
+          if (!sku) continue;
+
+          // Find product by SKU
+          const product = allProducts.find((p: Product) => p.sku === sku);
+          if (!product) {
+            console.warn(`Không tìm thấy sản phẩm với SKU: ${sku}`);
+            continue;
+          }
+
+          // Get prices from columns
+          selectedPriceLists.forEach((plId) => {
+            const colIndex = priceListColumns[plId];
+            if (colIndex !== undefined && row[colIndex]) {
+              const price = row[colIndex].toString().trim();
+              if (price && !isNaN(parseFloat(price))) {
+                updates.push({
+                  priceListId: plId,
+                  productId: product.id,
+                  price: parseFloat(price).toString(),
+                });
+              }
+            }
+          });
+        }
+
+        if (updates.length === 0) {
+          toast({
+            title: "Lỗi",
+            description: "Không có dữ liệu hợp lệ để import",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Batch update prices
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const update of updates) {
+          try {
+            await apiRequest("POST", "/api/price-list-items", update);
+            successCount++;
+          } catch (error) {
+            errorCount++;
+            console.error("Error updating price:", error);
+          }
+        }
+
+        await queryClient.invalidateQueries({ queryKey: ["/api/price-list-items", selectedPriceLists] });
+        await queryClient.refetchQueries({ queryKey: ["/api/price-list-items", selectedPriceLists] });
+
+        toast({
+          title: "Thành công",
+          description: `Import thành công ${successCount} giá${errorCount > 0 ? `, ${errorCount} lỗi` : ""}`,
+        });
+
+        setShowImportDialog(false);
+      } catch (error) {
+        console.error("Import error:", error);
+        toast({
+          title: "Lỗi",
+          description: error instanceof Error ? error.message : "Không thể import file Excel",
+          variant: "destructive",
+        });
+      } finally {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleDownloadTemplate = () => {
+    if (selectedPriceLists.length === 0) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng chọn bảng giá để tải mẫu",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const template = [
+      [
+        "Mã hàng",
+        "Tên hàng",
+        "Nhóm hàng",
+        ...selectedPriceLists.map((plId) => {
+          const pl = priceLists.find((p: PriceList) => p.id === plId);
+          return pl?.name || `Bảng giá ${plId}`;
+        }),
+      ],
+      ["ITEM-001", "Sản phẩm mẫu", "Danh mục mẫu", ...selectedPriceLists.map(() => "100000")],
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(template);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Mẫu bảng giá");
+    XLSX.writeFile(wb, "mau_bang_gia.xlsx");
+
+    toast({
+      title: "Thành công",
+      description: "Đã tải file mẫu thành công",
+    });
+  };
+
+  return (
+    <div className="h-full flex gap-4">
+      {/* Left Sidebar - Price Lists */}
+      <div className="w-64 flex-shrink-0 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">{t("settings.priceLists")}</h3>
+          {isAdmin && (
+            <Button
+              size="sm"
+              onClick={() => setIsDialogOpen(true)}
+              className="h-8"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              {t("settings.createNewPriceList")}
+            </Button>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          {priceListsLoading ? (
+            <div className="text-sm text-gray-500">Đang tải...</div>
+          ) : (
+            priceLists.map((priceList: PriceList) => (
+              <div
+                key={priceList.id}
+                className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                  selectedPriceLists.includes(priceList.id)
+                    ? "bg-blue-50 border-blue-300"
+                    : "bg-white border-gray-200 hover:bg-gray-50"
+                }`}
+                onClick={() => togglePriceListSelection(priceList.id)}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                        selectedPriceLists.includes(priceList.id)
+                          ? "bg-blue-500 border-blue-500"
+                          : "border-gray-300"
+                      }`}
+                    >
+                      {selectedPriceLists.includes(priceList.id) && (
+                        <Check className="w-3 h-3 text-white" />
+                      )}
+                    </div>
+                    <span className="text-sm font-medium truncate">
+                      {priceList.name}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1 ml-6">
+                    {t("settings.priceListCode")}: {priceList.code}
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEdit(priceList);
+                    }}
+                    className="h-8 w-8 p-0"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500">
+                      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                      <path d="m15 5 4 4"/>
+                    </svg>
+                  </Button>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(priceList);
+                      }}
+                      disabled={priceList.isDefault}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Right Content - Products Grid */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Card className="flex-1 flex flex-col">
+          <CardContent className="p-4 flex-1 flex flex-col overflow-hidden">
+            {/* Filters */}
+            <div className="flex items-center gap-4 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder={t("settings.searchProductPlaceholder")}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder={t("settings.categoryName")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("settings.allProductGroups")}</SelectItem>
+                  {categories.map((category: Category) => (
+                    <SelectItem key={category.id} value={category.id.toString()}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isAdmin && (
+                <Button
+                  onClick={() => setShowProductSelector(true)}
+                  disabled={selectedPriceLists.length === 0}
+                  className="whitespace-nowrap"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  {t("settings.addProductsToPriceList")}
+                </Button>
+              )}
+              <Button
+                onClick={handleExportExcel}
+                disabled={selectedPriceLists.length === 0 || filteredProducts.length === 0}
+                variant="outline"
+                className="whitespace-nowrap"
+              >
+                <FileDown className="w-4 h-4 mr-2" />
+                {t("settings.exportPriceList")}
+              </Button>
+              {isAdmin && (
+                <Button
+                  onClick={() => setShowImportDialog(true)}
+                  disabled={selectedPriceLists.length === 0}
+                  variant="outline"
+                  className="whitespace-nowrap"
+                >
+                  <FileUp className="w-4 h-4 mr-2" />
+                  {t("settings.importPriceList")}
+                </Button>
+              )}
+            </div>
+
+            {/* Products Table */}
+            <div className="flex-1 overflow-auto border rounded-lg">
+              <Table>
+                <TableHeader className="sticky top-0 bg-white z-10">
+                  <TableRow>
+                    <TableHead className="w-32">{t("settings.productCode")}</TableHead>
+                    <TableHead className="min-w-[200px]">{t("settings.productName")}</TableHead>
+                    {selectedPriceLists.map((priceListId) => {
+                      const priceList = priceLists.find(
+                        (pl: PriceList) => pl.id === priceListId
+                      );
+                      return (
+                        <TableHead
+                          key={priceListId}
+                          className="w-40 text-right bg-blue-50"
+                        >
+                          {priceList?.name || t("settings.priceLists")}
+                        </TableHead>
+                      );
+                    })}
+                    {isAdmin && (
+                      <TableHead className="w-24 text-center">{t("common.actions")}</TableHead>
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedPriceLists.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={3 + selectedPriceLists.length}
+                        className="text-center py-8 text-gray-500"
+                      >
+                        {t("settings.selectPriceListFirst")}
+                      </TableCell>
+                    </TableRow>
+                  ) : paginatedProducts.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={3 + selectedPriceLists.length}
+                        className="text-center py-8 text-gray-500"
+                      >
+                        {t("settings.noProductsInPriceList")}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedProducts.map((product) => (
+                      <TableRow key={product.id}>
+                        <TableCell className="font-mono text-sm">
+                          {product.sku}
+                        </TableCell>
+                        <TableCell>{product.name}</TableCell>
+                        {selectedPriceLists.map((priceListId, colIndex) => {
+                          const key = `${priceListId}-${product.id}`;
+                          const editingValue = editingPrices[key];
+                          const currentValue = editingValue !== undefined
+                            ? editingValue
+                            : (product.prices[priceListId] || "");
+
+                          return (
+                            <TableCell key={priceListId} className="text-right">
+                              <Input
+                                type="number"
+                                value={currentValue}
+                                data-price-input={`${product.id}-${colIndex}`}
+                                onChange={(e) =>
+                                  handlePriceInputChange(
+                                    priceListId,
+                                    product.id,
+                                    e.target.value
+                                  )
+                                }
+                                onBlur={(e) =>
+                                  handlePriceSave(
+                                    priceListId,
+                                    product.id,
+                                    e.target.value
+                                  )
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+
+                                    // Save current value
+                                    handlePriceSave(
+                                      priceListId,
+                                      product.id,
+                                      e.currentTarget.value
+                                    );
+
+                                    // Move to next cell
+                                    const nextColIndex = colIndex + 1;
+                                    if (nextColIndex < selectedPriceLists.length) {
+                                      // Move to next column in same row
+                                      setTimeout(() => {
+                                        const nextInput = document.querySelector(
+                                          `[data-price-input="${product.id}-${nextColIndex}"]`
+                                        ) as HTMLInputElement;
+                                        if (nextInput) {
+                                          nextInput.focus();
+                                          nextInput.select();
+                                        }
+                                      }, 50);
+                                    } else {
+                                      // Move to first column of next row
+                                      const currentRowIndex = paginatedProducts.findIndex(
+                                        (p) => p.id === product.id
+                                      );
+                                      if (currentRowIndex < paginatedProducts.length - 1) {
+                                        const nextProduct = paginatedProducts[currentRowIndex + 1];
+                                        setTimeout(() => {
+                                          const nextInput = document.querySelector(
+                                            `[data-price-input="${nextProduct.id}-0"]`
+                                          ) as HTMLInputElement;
+                                          if (nextInput) {
+                                            nextInput.focus();
+                                            nextInput.select();
+                                          }
+                                        }, 50);
+                                      }
+                                    }
+                                  }
+                                }}
+                                className="text-right w-full"
+                                min="0"
+                                step="1000"
+                              />
+                            </TableCell>
+                          );
+                        })}
+                        {isAdmin && (
+                          <TableCell className="text-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+
+                                if (selectedPriceLists.length === 0) {
+                                  toast({
+                                    title: "Lỗi",
+                                    description: "Vui lòng chọn bảng giá",
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+
+                                if (deleteProductFromPriceListMutation.isPending) {
+                                  return;
+                                }
+
+                                try {
+                                  let successCount = 0;
+                                  for (const priceListId of selectedPriceLists) {
+                                    await deleteProductFromPriceListMutation.mutateAsync({
+                                      priceListId,
+                                      productId: product.id,
+                                    });
+                                    successCount++;
+                                  }
+
+                                  await queryClient.refetchQueries({
+                                    queryKey: ["/api/price-list-items", selectedPriceLists],
+                                    exact: true
+                                  });
+
+                                  toast({
+                                    title: "Thành công",
+                                    description: `Đã xóa sản phẩm khỏi ${successCount} bảng giá`,
+                                  });
+                                } catch (error) {
+                                  console.error('Error deleting product from price list:', error);
+                                  toast({
+                                    title: "Lỗi",
+                                    description: error instanceof Error ? error.message : "Không thể xóa sản phẩm",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                              className="h-8 w-8 p-0 hover:bg-red-50"
+                              disabled={deleteProductFromPriceListMutation.isPending}
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Footer with Pagination */}
+            <div className="mt-4 flex items-center justify-between">
+              <div className="text-sm text-gray-500">
+                {t("settings.displayingProducts")} {filteredProducts.length} {t("settings.productsCount")}
+                {filteredProducts.length > 0 && (
+                  <span className="ml-2">
+                    ({t("common.page")} {currentPage}/{totalPages})
+                  </span>
+                )}
+              </div>
+
+              {filteredProducts.length > 0 && (
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{t("settings.itemsPerPageLabel")}</span>
+                    <Select
+                      value={pageSize.toString()}
+                      onValueChange={(value) => {
+                        setPageSize(Number(value));
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 w-[70px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span className="text-sm">{t("settings.productsCount")}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                    >
+                      {t("settings.firstPage")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      {t("settings.previousPage")}
+                    </Button>
+                    <span className="text-sm px-2">
+                      {t("common.page")} {currentPage} / {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      {t("settings.nextPage")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                    >
+                      {t("settings.lastPage")}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Product Selector Dialog */}
+      <Dialog open={showProductSelector} onOpenChange={setShowProductSelector}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>{t("settings.selectProductsToAdd")}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder={t("settings.searchProductsPlaceholder")}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder={t("settings.categoryName")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("settings.allProductGroups")}</SelectItem>
+                  {categories.map((category: Category) => (
+                    <SelectItem key={category.id} value={category.id.toString()}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="border rounded-lg max-h-96 overflow-auto">
+              <Table>
+                <TableHeader className="sticky top-0 bg-white z-10">
+                  <TableRow>
+                    <TableHead className="w-12">
+                      <input
+                        type="checkbox"
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            const availableProducts = allProducts.filter((product: Product) => {
+                              const matchesSearch =
+                                product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+                              const matchesCategory =
+                                selectedCategory === "all" ||
+                                product.categoryId.toString() === selectedCategory;
+
+                              // Check if product is not already in selected price lists
+                              const notInPriceList = !priceListItemsData.some(
+                                (item: PriceListItem) => item.productId === product.id
+                              );
+
+                              return matchesSearch && matchesCategory && notInPriceList;
+                            });
+                            setSelectedProducts(availableProducts.map((p: Product) => p.id));
+                          } else {
+                            setSelectedProducts([]);
+                          }
+                        }}
+                        className="w-4 h-4"
+                      />
+                    </TableHead>
+                    <TableHead>{t("settings.productCode")}</TableHead>
+                    <TableHead>{t("settings.productName")}</TableHead>
+                    <TableHead>{t("settings.categoryName")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allProducts
+                    .filter((product: Product) => {
+                      const matchesSearch =
+                        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+                      const matchesCategory =
+                        selectedCategory === "all" ||
+                        product.categoryId.toString() === selectedCategory;
+
+                      // Only show products not already in selected price lists
+                      const notInPriceList = !priceListItemsData.some(
+                        (item: PriceListItem) => item.productId === product.id
+                      );
+
+                      return matchesSearch && matchesCategory && notInPriceList;
+                    })
+                    .map((product: Product) => (
+                      <TableRow key={product.id} className="hover:bg-gray-50">
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            checked={selectedProducts.includes(product.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedProducts([...selectedProducts, product.id]);
+                              } else {
+                                setSelectedProducts(
+                                  selectedProducts.filter((id) => id !== product.id)
+                                );
+                              }
+                            }}
+                            className="w-4 h-4"
+                          />
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">{product.sku}</TableCell>
+                        <TableCell>{product.name}</TableCell>
+                        <TableCell>
+                          {categories.find((c: Category) => c.id === product.categoryId)?.name || "-"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  {allProducts.filter((product: Product) => {
+                    const matchesSearch =
+                      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+                    const matchesCategory =
+                      selectedCategory === "all" ||
+                      product.categoryId.toString() === selectedCategory;
+
+                    // Only show products not already in selected price lists
+                    const notInPriceList = !priceListItemsData.some(
+                      (item: PriceListItem) => item.productId === product.id
+                    );
+
+                    return matchesSearch && matchesCategory && notInPriceList;
+                  }).length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                        {t("settings.productsNotInPriceList")}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowProductSelector(false);
+                setSelectedProducts([]);
+              }}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              onClick={handleAddProducts}
+              disabled={selectedProducts.length === 0 || addProductsMutation.isPending}
+            >
+              {addProductsMutation.isPending
+                ? t("settings.addingProducts")
+                : `${t("settings.addProducts")} ${selectedProducts.length} ${t("settings.productsCount")}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Dialog */}
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("settings.importPricesFromExcel")}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="text-sm text-gray-600">
+              <p className="mb-2">{t("settings.instructions")}:</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>{t("settings.downloadExcelTemplate")}</li>
+                <li>{t("settings.fillInPrices")}</li>
+                <li>{t("settings.selectFileToImport")}</li>
+              </ol>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t("settings.excelFile")}</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImportExcel}
+                className="block w-full text-sm text-gray-500
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-md file:border-0
+                  file:text-sm file:font-medium
+                  file:bg-blue-50 file:text-blue-700
+                  hover:file:bg-blue-100"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDownloadTemplate}
+            >
+              <FileDown className="w-4 h-4 mr-2" />
+              {t("settings.downloadTemplate")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowImportDialog(false)}
+            >
+              {t("settings.closeDialog")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("settings.confirmDeletePriceListTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("settings.confirmDeletePriceListDesc").replace("{name}", priceListToDelete?.name || "")}
+              <br />
+              <br />
+              {t("settings.deletePriceListWarning")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setPriceListToDelete(null);
+              }}
+            >
+              {t("common.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? t("common.deleting") : t("settings.deletePriceListAction")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingPriceList ? t("settings.editPriceList") : t("settings.createPriceList")}
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="code">
+                {t("settings.priceListCode")} <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="code"
+                value={priceListForm.code}
+                onChange={(e) =>
+                  setPriceListForm({ ...priceListForm, code: e.target.value })
+                }
+                placeholder="VD: BG-0000001"
+                required
+                disabled={true}
+                className="bg-gray-50"
+              />
+              <p className="text-xs text-gray-500">{t("settings.priceListCodeAutoGenerated")}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="name">
+                {t("settings.priceListName")} <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="name"
+                value={priceListForm.name}
+                onChange={(e) =>
+                  setPriceListForm({ ...priceListForm, name: e.target.value })
+                }
+                placeholder={t("settings.enterPriceListName")}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">{t("settings.priceListDescription")}</Label>
+              <Input
+                id="description"
+                value={priceListForm.description}
+                onChange={(e) =>
+                  setPriceListForm({
+                    ...priceListForm,
+                    description: e.target.value,
+                  })
+                }
+                placeholder={t("settings.enterPriceListDescription")}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCloseDialog}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {(createMutation.isPending || updateMutation.isPending)
+                  ? t("settings.savingPriceList")
+                  : editingPriceList
+                    ? t("settings.updatePriceList")
+                    : t("settings.createPriceList")}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
