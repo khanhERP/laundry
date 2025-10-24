@@ -10,6 +10,7 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
     menuAnalysis: "Phân tích menu",
     tableAnalysis: "Phân tích bàn",
     backToTables: "Quay lại Bàn",
+    filter: "Bộ lọc",
     product: "Sản phẩm",
 
     // Dashboard overview labels
@@ -607,6 +608,7 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
 
   ko: {
     title: "보고서",
+    filter: "필터",
     description: "판매 및 운영 보고서 보기",
     dashboard: "대시보드",
     dashboardDescription: "총 매출 및 운영 상태 대시보드",
@@ -1182,6 +1184,7 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
 
   en: {
     title: "Reports",
+    filter: "Filter",
     description: "View sales and operational reports",
     dashboard: "Dashboard",
     dashboardDescription: "Dashboard of total sales and operational status",
