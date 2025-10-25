@@ -330,7 +330,7 @@ function MenuReport() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
               <Label className="block text-sm font-medium mb-2">
-                Cửa hàng
+                {t("common.storeLabel")}
               </Label>
               <select
                 value={storeFilter}
@@ -338,7 +338,7 @@ function MenuReport() {
                 className="h-10 w-full px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer"
               >
                 {storesData.filter((store: any) => store.typeUser !== 1).length > 1 && (
-                  <option value="all">Tất cả</option>
+                  <option value="all">{t("common.allStores")}</option>
                 )}
                 {storesData
                   .filter((store: any) => store.typeUser !== 1)

@@ -131,8 +131,12 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
         status: "all",
       });
 
-      // Add store filter if not "all"
-      if (storeFilter !== "all") {
+      // Add store filter based on selection and user permission
+      if (storeFilter === "all") {
+        // When "all" is selected, pass "all" to let server handle permission logic
+        params.append("storeFilter", "all");
+      } else {
+        // Specific store selected
         params.append("storeFilter", storeFilter);
       }
 
@@ -140,6 +144,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
         startDate,
         endDate,
         storeFilter,
+        isAdmin: storeSettings?.isAdmin,
         url: `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/list?${params}`,
       });
 
@@ -173,6 +178,9 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
     const netRevenue = orders.reduce((sum: number, order: any) => {
       const subtotal = parseFloat(order.subtotal || 0);
       const discount = parseFloat(order.discount || 0);
+      if (order.priceIncludeTax === true) {
+        return sum + subtotal;
+      }
       return sum + (subtotal - discount);
     }, 0);
 
@@ -203,7 +211,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
       const dayRevenue = ordersData.orders
         .filter((order: any) => {
           if (!order.orderedAt) return false;
-          const orderDate = order.orderedAt.split('T')[0];
+          const orderDate = order.orderedAt.split("T")[0];
           return orderDate === dateStr;
         })
         .reduce(
@@ -216,7 +224,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
         result.push({
           revenue: dayRevenue,
           date: dateStr,
-          day: day
+          day: day,
         });
       }
     }
@@ -399,7 +407,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                       className="cursor-pointer hover:bg-green-100"
                     >
                       <Package className="w-4 h-4 mr-2" />
-                      {t('settings.productCategories')}
+                      {t("settings.productCategories")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
@@ -409,7 +417,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                       className="cursor-pointer hover:bg-green-100"
                     >
                       <UserCheck className="w-4 h-4 mr-2" />
-                      {t('settings.customers')}
+                      {t("settings.customers")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
@@ -433,7 +441,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                         <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                       </svg>
-                      {t('settings.suppliers')}
+                      {t("settings.suppliers")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
@@ -443,7 +451,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                       className="cursor-pointer hover:bg-green-100"
                     >
                       <Users className="w-4 h-4 mr-2" />
-                      {t('settings.employees')}
+                      {t("settings.employees")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -477,7 +485,8 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                         onChange={(e) => setStoreFilter(e.target.value)}
                         className="h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer"
                       >
-                        {storesData.filter((store: any) => store.typeUser !== 1).length > 1 && (
+                        {storesData.filter((store: any) => store.typeUser !== 1)
+                          .length > 1 && (
                           <option value="all">{t("common.all")}</option>
                         )}
                         {storesData
@@ -530,7 +539,8 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                         {t("reports.salesAmount")}
                       </p>
                       <p className="text-2xl font-bold text-blue-600">
-                        {todayStats?.todaySales?.toLocaleString("vi-VN") || "0"} ₫
+                        {todayStats?.todaySales?.toLocaleString("vi-VN") || "0"}{" "}
+                        ₫
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
                         {startDate} ~ {endDate}
@@ -545,7 +555,9 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                       <p className="text-2xl font-bold text-purple-600">
                         {todayStats?.orders?.toLocaleString("vi-VN") || "0"}
                       </p>
-                      <p className="text-xs text-gray-500">{t("reports.count")}</p>
+                      <p className="text-xs text-gray-500">
+                        {t("reports.count")}
+                      </p>
                     </div>
 
                     {/* Doanh thu thuần */}
@@ -554,9 +566,12 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                         {t("reports.netRevenue")}
                       </p>
                       <p className="text-2xl font-bold text-green-600">
-                        {todayStats?.netRevenue?.toLocaleString("vi-VN") || "0"} ₫
+                        {todayStats?.netRevenue?.toLocaleString("vi-VN") || "0"}{" "}
+                        ₫
                       </p>
-                      <p className="text-xs text-gray-500">{t("reports.afterDiscount")}</p>
+                      <p className="text-xs text-gray-500">
+                        {t("reports.afterDiscount")}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -567,7 +582,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
                     <CardTitle className="text-lg font-semibold">
-                      {t('reports.dailySalesChart')}
+                      {t("reports.dailySalesChart")}
                     </CardTitle>
                   </div>
                   <div className="flex items-center gap-2">
@@ -582,9 +597,15 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="today">{t('reports.thisMonth')}</SelectItem>
-                        <SelectItem value="week">{t('reports.thisWeek')}</SelectItem>
-                        <SelectItem value="month">{t('reports.toDay')}</SelectItem>
+                        <SelectItem value="today">
+                          {t("reports.thisMonth")}
+                        </SelectItem>
+                        <SelectItem value="week">
+                          {t("reports.thisWeek")}
+                        </SelectItem>
+                        <SelectItem value="month">
+                          {t("reports.toDay")}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -594,30 +615,41 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                   <div className="h-64 flex items-end justify-between gap-1 px-2 overflow-x-auto">
                     {dailyRevenue && dailyRevenue.length > 0 ? (
                       dailyRevenue.map((day: any, index: number) => {
-                        const maxRevenue = Math.max(...dailyRevenue.map((d: any) => d.revenue), 1);
+                        const maxRevenue = Math.max(
+                          ...dailyRevenue.map((d: any) => d.revenue),
+                          1,
+                        );
                         const heightPercent = (day.revenue / maxRevenue) * 100;
 
                         return (
                           <div
                             key={index}
                             className="flex flex-col items-center group relative"
-                            style={{ minWidth: '30px' }}
+                            style={{ minWidth: "30px" }}
                           >
                             <div
                               className="w-full bg-blue-500 rounded-t hover:bg-blue-600 transition-colors cursor-pointer"
                               style={{
                                 height: `${Math.max(heightPercent, 2)}%`,
-                                minHeight: '8px',
+                                minHeight: "8px",
                               }}
-                              title={`${new Date(day.date).getDate()}/${new Date(day.date).getMonth() + 1}: ${day.revenue.toLocaleString('vi-VN')} ₫`}
+                              title={`${new Date(day.date).getDate()}/${new Date(day.date).getMonth() + 1}: ${day.revenue.toLocaleString("vi-VN")} ₫`}
                             ></div>
                             <span className="text-xs text-gray-600 mt-2">
                               {new Date(day.date).getDate()}
                             </span>
                             {/* Tooltip */}
                             <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 hidden group-hover:block bg-gray-900 text-white text-sm rounded-lg px-4 py-3 whitespace-nowrap z-50 shadow-xl border border-gray-700">
-                              <div className="font-semibold mb-1">{t('reports.day')} {new Date(day.date).getDate()}/{new Date(day.date).getMonth() + 1}/{new Date(day.date).getFullYear()}</div>
-                              <div className="text-green-300 font-bold">{t('reports.sales')}: {day.revenue.toLocaleString('vi-VN')} ₫</div>
+                              <div className="font-semibold mb-1">
+                                {t("reports.day")}{" "}
+                                {new Date(day.date).getDate()}/
+                                {new Date(day.date).getMonth() + 1}/
+                                {new Date(day.date).getFullYear()}
+                              </div>
+                              <div className="text-green-300 font-bold">
+                                {t("reports.sales")}:{" "}
+                                {day.revenue.toLocaleString("vi-VN")} ₫
+                              </div>
                               {/* Arrow */}
                               <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-px">
                                 <div className="border-8 border-transparent border-t-gray-900"></div>
@@ -628,7 +660,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                       })
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        {t('reports.noDataInDateRange')}
+                        {t("reports.noDataInDateRange")}
                       </div>
                     )}
                   </div>
@@ -637,7 +669,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 bg-blue-500 rounded"></div>
                       <span className="text-xs text-gray-600">
-                        {t('reports.salesRevenue')}
+                        {t("reports.salesRevenue")}
                       </span>
                     </div>
                   </div>
@@ -650,7 +682,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                 <Card className="bg-white shadow-sm">
                   <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="text-lg font-semibold">
-                      {t('reports.topSellingItems')}
+                      {t("reports.topSellingItems")}
                     </CardTitle>
                     <div className="flex gap-2">
                       <Select defaultValue="month">
@@ -659,10 +691,14 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="month">
-                            {t('reports.monthlyRevenue')}
+                            {t("reports.monthlyRevenue")}
                           </SelectItem>
-                          <SelectItem value="week">{t('reports.thisWeek')}</SelectItem>
-                          <SelectItem value="day">{t('reports.toDay')}</SelectItem>
+                          <SelectItem value="week">
+                            {t("reports.thisWeek")}
+                          </SelectItem>
+                          <SelectItem value="day">
+                            {t("reports.toDay")}
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <Select defaultValue="today">
@@ -670,8 +706,12 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="today">{t('reports.thisMonth')}</SelectItem>
-                          <SelectItem value="week">{t('reports.thisWeek')}</SelectItem>
+                          <SelectItem value="today">
+                            {t("reports.thisMonth")}
+                          </SelectItem>
+                          <SelectItem value="week">
+                            {t("reports.thisWeek")}
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -859,7 +899,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                 <Card className="bg-white shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-lg font-semibold">
-                      {t('reports.topCustomers')}
+                      {t("reports.topCustomers")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -949,14 +989,14 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                     className="flex items-center gap-2 text-gray-700 px-4 py-2.5 rounded-md data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-gray-100 transition-colors"
                   >
                     <BarChart3 className="w-4 h-4" />
-                    {t('reports.dashboardTab')}
+                    {t("reports.dashboardTab")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="sales-analysis"
                     className="flex items-center gap-2 text-gray-700 px-4 py-2.5 rounded-md data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-gray-100 transition-colors"
                   >
                     <PieChart className="w-4 h-4" />
-                    {t('reports.salesAnalysisTab')}
+                    {t("reports.salesAnalysisTab")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="menu"
@@ -974,7 +1014,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                     >
                       <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                     </svg>
-                    {t('reports.menuAnalysisTab')}
+                    {t("reports.menuAnalysisTab")}
                   </TabsTrigger>
 
                   <TabsTrigger
@@ -982,7 +1022,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                     className="flex items-center gap-2 text-gray-700 px-4 py-2.5 rounded-md data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-gray-100 transition-colors"
                   >
                     <BarChart3 className="w-4 h-4" />
-                    {t('reports.salesReportTab')}
+                    {t("reports.salesReportTab")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="expense"
@@ -1001,7 +1041,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                       <line x1="12" y1="1" x2="12" y2="23" />
                       <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                     </svg>
-                    {t('reports.spendingReportTab')}
+                    {t("reports.spendingReportTab")}
                   </TabsTrigger>
                 </TabsList>
 
@@ -1017,7 +1057,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                   <MenuReport />
                 </TabsContent>
 
-                {storeSettings?.businessType !== 'laundry' && (
+                {storeSettings?.businessType !== "laundry" && (
                   <TabsContent value="table">
                     <TableReport />
                   </TabsContent>
@@ -1155,7 +1195,9 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                 {/* Right Content Area */}
                 <div className="flex-1">
                   {settingsSubTab === "store" && <StoreSettingsContent />}
-                  {settingsSubTab === "users" && storeSettings?.isAdmin && <UserManagementContent />}
+                  {settingsSubTab === "users" && storeSettings?.isAdmin && (
+                    <UserManagementContent />
+                  )}
                   {settingsSubTab === "einvoice" && <EInvoiceSettingsContent />}
                   {settingsSubTab === "printer" && <PrinterSettingsContent />}
                   {settingsSubTab === "payment" && (

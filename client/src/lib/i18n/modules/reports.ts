@@ -120,29 +120,6 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
     inactive: "Không hoạt động",
     active: "Hoạt động",
 
-    // Chart and visual
-    chartView: "Xem biểu đồ",
-    visualRepresentation: "Trực quan hóa dữ liệu",
-
-    // Filter labels
-    salesMethod: "Hình thức bán hàng",
-    salesChannel: "Hình thức bán hàng",
-    productFilter: "Sản phẩm",
-    productFilterPlaceholder: "Tìm theo tên hoặc mã",
-    customerFilter: "Khách hàng",
-    customerFilterPlaceholder: "Tìm theo tên, số điện thoại hoặc mã",
-    customerCodePlaceholder: "Tìm theo mã khách hàng",
-    orderNumberPlaceholder: "Tìm theo số đơn bán",
-    employeeFilter: "Tìm kiếm nhân viên",
-    employeeFilterPlaceholder: "Tìm theo tên nhân viên",
-    employeeId: "Mã nhân viên",
-    customerId: "Mã khách hàng",
-    customerName: "Tên khách hàng",
-    vip: "Khách VIP",
-    newCustomer: "Khách hàng mới",
-    inactive: "Không hoạt động",
-    active: "Hoạt động",
-
     // Sales chart table columns
     date: "Ngày",
     orderNumber: "Số đơn hàng",
@@ -613,12 +590,9 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
     dashboard: "대시보드",
     dashboardDescription: "총 매출 및 운영 상태 대시보드",
     salesAnalysis: "매출 분석",
-    orderCount: "주문 수",
     menuAnalysis: "메뉴 분석",
-    totalMoney: "총 금액",
     tableAnalysis: "테이블 분석",
     backToTables: "테이블로 돌아가기",
-    product: "상품",
 
     // Dashboard overview labels
     store: "매장",
@@ -1674,6 +1648,8 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
 
     // Status
     status: "Status",
+    active: "Active",
+    inactive: "Inactive",
 
     // Additional report sections
     detailedAnalysis: "Detailed Analysis",

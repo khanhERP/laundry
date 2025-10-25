@@ -4,6 +4,7 @@ export const ordersTranslations: { [key: string]: OrdersTranslations } = {
   ko: {
     atCounter: "카운터",
     phoneNumber: "전화번호",
+    issueInvoice: "송장 발행",
     orderNumberLabel: "주문 번호",
     orderDateLabel: "주문 날짜",
     customerNameLabel: "고객명",
@@ -212,6 +213,7 @@ export const ordersTranslations: { [key: string]: OrdersTranslations } = {
       preparing: "조리중",
       ready: "준비완료",
       served: "서빙완료",
+      serving: "서빙중",
       paid: "결제완료",
       cancelled: "취소됨",
       delivering: "배송중",
@@ -234,6 +236,7 @@ export const ordersTranslations: { [key: string]: OrdersTranslations } = {
   en: {
     atCounter: "At Counter",
     orderNumberLabel: "Order Number",
+    issueInvoice: "Issue Invoice",
     phoneNumber: "Phone Number",
     orderDateLabel: "Order Date",
     customerNameLabel: "Customer Name",
@@ -444,6 +447,7 @@ export const ordersTranslations: { [key: string]: OrdersTranslations } = {
       preparing: "Preparing",
       ready: "Ready",
       served: "Served",
+      serving: "Serving",
       paid: "Paid",
       cancelled: "Cancelled",
       delivering: "Delivering",
@@ -468,6 +472,7 @@ export const ordersTranslations: { [key: string]: OrdersTranslations } = {
   vi: {
     atCounter: "Tại quầy",
     phoneNumber: "Số điện thoại",
+    issueInvoice: "Xuất hóa đơn",
     orderNumberLabel: "Số đơn hàng",
     orderDateLabel: "Ngày đơn hàng",
     customerNameLabel: "Tên khách hàng",
@@ -680,6 +685,7 @@ export const ordersTranslations: { [key: string]: OrdersTranslations } = {
       preparing: "Đang chuẩn bị",
       ready: "Sẵn sàng",
       served: "Đã phục vụ",
+      serving: "Đang phục vụ",
       paid: "Đã thanh toán",
       cancelled: "Đã hủy",
       delivering: "Đang giao hàng",

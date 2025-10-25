@@ -57,12 +57,14 @@ import {
   DollarSign,
   Eye,
   Trash2,
+  Download,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { PurchaseOrder, Supplier } from "@shared/schema";
 import PurchaseFormPage from "./purchase-form";
 import PurchaseViewPage from "./purchase-view";
+import * as XLSX from "xlsx";
 
 interface PurchasesPageProps {
   onLogout: () => void;
@@ -491,19 +493,31 @@ export default function PurchasesPage({ onLogout }: PurchasesPageProps) {
             </Button>
 
             <Button
-              className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 sm:px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200 text-sm"
-              onClick={(e) => {
-                e.preventDefault();
-                console.log("🔘 Create purchase order button clicked - opening dialog");
-                setShowCreateDialog(true);
+              variant="outline"
+              onClick={() => {
+                const selectedPurchases = filteredOrders.filter(order => selectedOrders.has(order.id));
+                const excelData = selectedPurchases.map(order => ({
+                  "Số phiếu": order.receiptNumber || order.poNumber || "-",
+                  "Ngày nhập": order.purchaseDate || order.actualDeliveryDate || order.createdAt,
+                  "Nhà cung cấp": order.supplier?.name || getSupplierName(order.supplierId),
+                  "Thành tiền": parseFloat(order.subtotal || order.total || "0"),
+                  "Giảm giá": order.items?.reduce((sum, item) => sum + parseFloat(item.discount || "0"), 0) || 0,
+                  "Tổng tiền": parseFloat(order.total || "0"),
+                  "Ghi chú": order.notes || ""
+                }));
+
+                const ws = XLSX.utils.json_to_sheet(excelData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Phiếu nhập");
+                XLSX.writeFile(wb, `phieu-nhap-hang_${new Date().toISOString().slice(0,10)}.xlsx`);
               }}
-              data-testid="button-create-purchase-order"
+              disabled={selectedOrders.size === 0}
+              className="border-green-600 text-green-600 hover:bg-green-50 font-semibold px-4 sm:px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200 text-sm"
             >
-              <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-              <span className="hidden sm:inline">
-                {t("purchases.createNewPurchaseOrder")}
-              </span>
-              <span className="sm:hidden">Tạo mới</span>
+              <Download className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+              <span className="hidden sm:inline">{t("purchases.exportToExcel")}</span>
+              <span className="sm:hidden">Excel</span>
+              <span className="ml-1">({selectedOrders.size})</span>
             </Button>
           </div>
 
@@ -582,7 +596,7 @@ export default function PurchasesPage({ onLogout }: PurchasesPageProps) {
                           {t("purchases.totalAmount")}
                         </TableHead>
                         <TableHead className="font-bold min-w-[150px] text-xs sm:text-sm">
-                          Ghi chú
+                          {t("purchases.notesColumn")}
                         </TableHead>
                       </TableRow>
                     </TableHeader>

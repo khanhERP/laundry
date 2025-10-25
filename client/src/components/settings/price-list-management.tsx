@@ -46,13 +46,15 @@ import * as XLSX from "xlsx";
 
 // Helper function to format currency
 const formatCurrency = (value: string | number): string => {
-  const numValue = typeof value === 'string' ? parseFloat(value) : value;
-  if (isNaN(numValue)) return '0';
+  const numValue = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(numValue)) return "0";
   // Format: dấu phẩy (,) ngăn cách hàng nghìn, dấu chấm (.) ngăn cách thập phân
-  return numValue.toLocaleString('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).replace(/,/g, ','); // Giữ dấu phẩy cho hàng nghìn
+  return numValue
+    .toLocaleString("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    })
+    .replace(/,/g, ","); // Giữ dấu phẩy cho hàng nghìn
 };
 
 interface PriceList {
@@ -106,8 +108,12 @@ export function PriceListManagement() {
   const [showProductSelector, setShowProductSelector] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [priceListToDelete, setPriceListToDelete] = useState<PriceList | null>(null);
-  const [editingPriceList, setEditingPriceList] = useState<PriceList | null>(null);
+  const [priceListToDelete, setPriceListToDelete] = useState<PriceList | null>(
+    null,
+  );
+  const [editingPriceList, setEditingPriceList] = useState<PriceList | null>(
+    null,
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editingPrices, setEditingPrices] = useState<{
     [key: string]: string;
@@ -132,14 +138,8 @@ export function PriceListManagement() {
   });
 
   const isAdmin = currentUserSettings?.isAdmin || false;
-  const userStoreCodes = currentUserSettings?.parent?.split(',').map((s: string) => s.trim()) || [];
-
-  // Initialize store filter for non-admin users
-  useEffect(() => {
-    if (!isAdmin && userStoreCodes.length > 0 && storeFilter === "all") {
-      setStoreFilter(userStoreCodes[0]);
-    }
-  }, [isAdmin, userStoreCodes]);
+  const userStoreCodes =
+    currentUserSettings?.parent?.split(",").map((s: string) => s.trim()) || [];
 
   // Fetch all stores for selection
   const { data: allStores = [] } = useQuery({
@@ -152,10 +152,11 @@ export function PriceListManagement() {
   });
 
   // Filter stores based on user permission
-  const availableStores = isAdmin 
+  const availableStores = isAdmin
     ? allStores.filter((store: any) => store.typeUser !== 1)
-    : allStores.filter((store: any) => 
-        store.typeUser !== 1 && userStoreCodes.includes(store.storeCode)
+    : allStores.filter(
+        (store: any) =>
+          store.typeUser !== 1 && userStoreCodes.includes(store.storeCode),
       );
 
   // Fetch next price list code
@@ -168,6 +169,14 @@ export function PriceListManagement() {
     },
     enabled: isDialogOpen && !editingPriceList,
   });
+
+  // Initialize store filter for non-admin users
+  useEffect(() => {
+    if (!isAdmin && availableStores.length > 0 && storeFilter === "all") {
+      setStoreFilter(availableStores[0].storeCode);
+    }
+  }, [isAdmin, availableStores, storeFilter]);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -188,7 +197,9 @@ export function PriceListManagement() {
     }
     return priceLists.filter((priceList: PriceList) => {
       if (!priceList.storeCode) return false;
-      const storeCodes = priceList.storeCode.split(',').map((s: string) => s.trim());
+      const storeCodes = priceList.storeCode
+        .split(",")
+        .map((s: string) => s.trim());
       return storeCodes.includes(storeFilter);
     });
   }, [priceLists, storeFilter]);
@@ -220,7 +231,10 @@ export function PriceListManagement() {
       if (selectedPriceLists.length === 0) return [];
 
       const itemsPromises = selectedPriceLists.map(async (priceListId) => {
-        const response = await apiRequest("GET", `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists/${priceListId}`);
+        const response = await apiRequest(
+          "GET",
+          `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists/${priceListId}`,
+        );
         if (!response.ok) throw new Error("Failed to fetch price list items");
         const data = await response.json();
         return data.items || [];
@@ -238,10 +252,16 @@ export function PriceListManagement() {
       // Auto-generate code if not provided
       if (!data.code) {
         // Fetch current price lists to determine the next code
-        const existingListsResponse = await apiRequest("GET", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists");
-        if (!existingListsResponse.ok) throw new Error("Failed to fetch existing price lists for code generation");
+        const existingListsResponse = await apiRequest(
+          "GET",
+          "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists",
+        );
+        if (!existingListsResponse.ok)
+          throw new Error(
+            "Failed to fetch existing price lists for code generation",
+          );
         const existingLists = await existingListsResponse.json();
-        
+
         const maxCode = existingLists.reduce((max: number, list: PriceList) => {
           const match = list.code?.match(/BG-(\d+)/);
           if (match) {
@@ -252,7 +272,7 @@ export function PriceListManagement() {
         }, 0);
         data.code = `BG-${String(maxCode + 1).padStart(6, "0")}`;
       }
-      
+
       const response = await apiRequest("POST", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists", data);
       if (!response.ok) {
         const error = await response.json();
@@ -374,16 +394,27 @@ export function PriceListManagement() {
       priceListId: number;
       productId: number;
     }) => {
-      console.log(`🗑️ Deleting product ${productId} from price list ${priceListId}`);
-      const response = await apiRequest("DELETE", `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items/${priceListId}/${productId}`);
+      console.log(
+        `🗑️ Deleting product ${productId} from price list ${priceListId}`,
+      );
+      const response = await apiRequest(
+        "DELETE",
+        `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items/${priceListId}/${productId}`,
+      );
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: "Không thể xóa sản phẩm" }));
-        throw new Error(error.message || error.error || "Không thể xóa sản phẩm");
+        const error = await response
+          .json()
+          .catch(() => ({ message: "Không thể xóa sản phẩm" }));
+        throw new Error(
+          error.message || error.error || "Không thể xóa sản phẩm",
+        );
       }
       return response.json();
     },
     onSuccess: (_, variables) => {
-      console.log(`✅ Product ${variables.productId} deleted from price list ${variables.priceListId}`);
+      console.log(
+        `✅ Product ${variables.productId} deleted from price list ${variables.priceListId}`,
+      );
     },
     onError: (error: Error) => {
       console.error("❌ Delete mutation error:", error);
@@ -404,8 +435,13 @@ export function PriceListManagement() {
 
   // Auto-fill code when creating new price list (optional now)
   useEffect(() => {
-    if (isDialogOpen && !editingPriceList && nextCodeData?.code && !priceListForm.code) {
-      setPriceListForm(prev => ({
+    if (
+      isDialogOpen &&
+      !editingPriceList &&
+      nextCodeData?.code &&
+      !priceListForm.code
+    ) {
+      setPriceListForm((prev) => ({
         ...prev,
         code: nextCodeData.code,
       }));
@@ -444,7 +480,7 @@ export function PriceListManagement() {
 
     const submitData = {
       ...priceListForm,
-      storeCode: priceListForm.storeCodes.join(','),
+      storeCode: priceListForm.storeCodes.join(","),
     };
 
     if (editingPriceList) {
@@ -469,7 +505,9 @@ export function PriceListManagement() {
       name: priceList.name,
       description: priceList.description || "",
       isActive: priceList.isActive,
-      storeCodes: priceList.storeCode ? priceList.storeCode.split(',').map((s: string) => s.trim()) : [],
+      storeCodes: priceList.storeCode
+        ? priceList.storeCode.split(",").map((s: string) => s.trim())
+        : [],
     });
     setIsDialogOpen(true);
   };
@@ -489,7 +527,7 @@ export function PriceListManagement() {
 
   const togglePriceListSelection = (id: number) => {
     setSelectedPriceLists((prev) =>
-      prev.includes(id) ? prev.filter((plId) => plId !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((plId) => plId !== id) : [...prev, id],
     );
   };
 
@@ -514,8 +552,8 @@ export function PriceListManagement() {
         // Get prices from price list items
         selectedPriceLists.forEach((priceListId) => {
           const item = priceListItemsData.find(
-            (i: PriceListItem) => 
-              i.priceListId === priceListId && i.productId === product.id
+            (i: PriceListItem) =>
+              i.priceListId === priceListId && i.productId === product.id,
           );
           prices[priceListId] = item ? item.price : "";
         });
@@ -559,7 +597,7 @@ export function PriceListManagement() {
   const handlePriceInputChange = (
     priceListId: number,
     productId: number,
-    value: string
+    value: string,
   ) => {
     const key = `${priceListId}-${productId}`;
     setEditingPrices((prev) => ({
@@ -571,7 +609,7 @@ export function PriceListManagement() {
   const handlePriceSave = (
     priceListId: number,
     productId: number,
-    newPrice: string
+    newPrice: string,
   ) => {
     const key = `${priceListId}-${productId}`;
 
@@ -616,7 +654,9 @@ export function PriceListManagement() {
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || errorData.error || "Không thể thêm sản phẩm");
+            throw new Error(
+              errorData.message || errorData.error || "Không thể thêm sản phẩm",
+            );
           }
           return response.json();
         });
@@ -630,8 +670,12 @@ export function PriceListManagement() {
     },
     onSuccess: async () => {
       // Invalidate and refetch price list items with selected price lists
-      await queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists] });
-      await queryClient.refetchQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists] });
+      await queryClient.invalidateQueries({
+        queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
+      });
+      await queryClient.refetchQueries({
+        queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
+      });
       await queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists"] });
 
       setShowProductSelector(false);
@@ -700,7 +744,8 @@ export function PriceListManagement() {
       const row = [
         product.sku,
         product.name,
-        categories.find((c: Category) => c.id === product.categoryId)?.name || "",
+        categories.find((c: Category) => c.id === product.categoryId)?.name ||
+          "",
         ...selectedPriceLists.map((plId) => product.prices[plId] || ""),
       ];
       exportData.push(row);
@@ -756,7 +801,9 @@ export function PriceListManagement() {
         const workbook = XLSX.read(data, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+          header: 1,
+        }) as any[][];
 
         if (jsonData.length < 2) {
           throw new Error("File Excel không có dữ liệu");
@@ -777,7 +824,11 @@ export function PriceListManagement() {
         });
 
         // Process rows
-        const updates: Array<{ priceListId: number; productId: number; price: string }> = [];
+        const updates: Array<{
+          priceListId: number;
+          productId: number;
+          price: string;
+        }> = [];
 
         for (let i = 1; i < jsonData.length; i++) {
           const row = jsonData[i];
@@ -831,8 +882,12 @@ export function PriceListManagement() {
           }
         }
 
-        await queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists] });
-        await queryClient.refetchQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists] });
+        await queryClient.invalidateQueries({
+          queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
+        });
+        await queryClient.refetchQueries({
+          queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
+        });
 
         toast({
           title: "Thành công",
@@ -844,7 +899,10 @@ export function PriceListManagement() {
         console.error("Import error:", error);
         toast({
           title: "Lỗi",
-          description: error instanceof Error ? error.message : "Không thể import file Excel",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Không thể import file Excel",
           variant: "destructive",
         });
       } finally {
@@ -877,7 +935,12 @@ export function PriceListManagement() {
           return pl?.name || `Bảng giá ${plId}`;
         }),
       ],
-      ["ITEM-001", "Sản phẩm mẫu", "Danh mục mẫu", ...selectedPriceLists.map(() => "100000")],
+      [
+        "ITEM-001",
+        "Sản phẩm mẫu",
+        "Danh mục mẫu",
+        ...selectedPriceLists.map(() => "100000"),
+      ],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(template);
@@ -897,15 +960,13 @@ export function PriceListManagement() {
       <div className="w-64 flex-shrink-0 space-y-4">
         {/* Store Filter */}
         <div className="space-y-2">
-          <Label>Lọc theo cửa hàng</Label>
+          <Label>{t("common.storeFilterLabel")}</Label>
           <Select value={storeFilter} onValueChange={setStoreFilter}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Chọn cửa hàng" />
             </SelectTrigger>
             <SelectContent>
-              {isAdmin && (
-                <SelectItem value="all">Tất cả</SelectItem>
-              )}
+              {isAdmin && <SelectItem value="all">Tất cả</SelectItem>}
               {availableStores.map((store: any) => (
                 <SelectItem key={store.id} value={store.storeCode}>
                   {store.storeName} ({store.storeCode})
@@ -972,9 +1033,20 @@ export function PriceListManagement() {
                     }}
                     className="h-8 w-8 p-0"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500">
-                      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                      <path d="m15 5 4 4"/>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-blue-500"
+                    >
+                      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                      <path d="m15 5 4 4" />
                     </svg>
                   </Button>
                   <Button
@@ -985,13 +1057,21 @@ export function PriceListManagement() {
                       handleDelete(priceList);
                     }}
                     disabled={
-                      priceList.isDefault || 
-                      (!isAdmin && priceList.storeCode && priceList.storeCode.split(',').filter((s: string) => s.trim()).length > 1)
+                      priceList.isDefault ||
+                      (!isAdmin &&
+                        priceList.storeCode &&
+                        priceList.storeCode
+                          .split(",")
+                          .filter((s: string) => s.trim()).length > 1)
                     }
                     title={
-                      priceList.isDefault 
+                      priceList.isDefault
                         ? "Không thể xóa bảng giá mặc định"
-                        : (!isAdmin && priceList.storeCode && priceList.storeCode.split(',').filter((s: string) => s.trim()).length > 1)
+                        : !isAdmin &&
+                            priceList.storeCode &&
+                            priceList.storeCode
+                              .split(",")
+                              .filter((s: string) => s.trim()).length > 1
                           ? "Chỉ admin mới có quyền xóa bảng giá áp dụng nhiều cửa hàng"
                           : ""
                     }
@@ -1021,14 +1101,22 @@ export function PriceListManagement() {
                   className="pl-10"
                 />
               </div>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <Select
+                value={selectedCategory}
+                onValueChange={setSelectedCategory}
+              >
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder={t("settings.categoryName")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{t("settings.allProductGroups")}</SelectItem>
+                  <SelectItem value="all">
+                    {t("settings.allProductGroups")}
+                  </SelectItem>
                   {categories.map((category: Category) => (
-                    <SelectItem key={category.id} value={category.id.toString()}>
+                    <SelectItem
+                      key={category.id}
+                      value={category.id.toString()}
+                    >
                       {category.name}
                     </SelectItem>
                   ))}
@@ -1044,7 +1132,10 @@ export function PriceListManagement() {
               </Button>
               <Button
                 onClick={handleExportExcel}
-                disabled={selectedPriceLists.length === 0 || filteredProducts.length === 0}
+                disabled={
+                  selectedPriceLists.length === 0 ||
+                  filteredProducts.length === 0
+                }
                 variant="outline"
                 className="whitespace-nowrap"
               >
@@ -1067,11 +1158,15 @@ export function PriceListManagement() {
               <Table>
                 <TableHeader className="sticky top-0 bg-white z-10">
                   <TableRow>
-                    <TableHead className="w-32">{t("settings.productCode")}</TableHead>
-                    <TableHead className="min-w-[200px]">{t("settings.productName")}</TableHead>
+                    <TableHead className="w-32">
+                      {t("settings.productCode")}
+                    </TableHead>
+                    <TableHead className="min-w-[200px]">
+                      {t("settings.productName")}
+                    </TableHead>
                     {selectedPriceLists.map((priceListId) => {
                       const priceList = priceLists.find(
-                        (pl: PriceList) => pl.id === priceListId
+                        (pl: PriceList) => pl.id === priceListId,
                       );
                       return (
                         <TableHead
@@ -1082,7 +1177,9 @@ export function PriceListManagement() {
                         </TableHead>
                       );
                     })}
-                    <TableHead className="w-24 text-center">{t("common.actions")}</TableHead>
+                    <TableHead className="w-24 text-center">
+                      {t("common.actions")}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1114,14 +1211,19 @@ export function PriceListManagement() {
                         {selectedPriceLists.map((priceListId, colIndex) => {
                           const key = `${priceListId}-${product.id}`;
                           const editingValue = editingPrices[key];
-                          const currentValue = editingValue !== undefined 
-                            ? editingValue 
-                            : (product.prices[priceListId] || "");
+                          const currentValue =
+                            editingValue !== undefined
+                              ? editingValue
+                              : product.prices[priceListId] || "";
 
                           // Find the price list to check store count
-                          const priceList = priceLists.find((pl: PriceList) => pl.id === priceListId);
-                          const storeCount = priceList?.storeCode 
-                            ? priceList.storeCode.split(',').filter((s: string) => s.trim()).length 
+                          const priceList = priceLists.find(
+                            (pl: PriceList) => pl.id === priceListId,
+                          );
+                          const storeCount = priceList?.storeCode
+                            ? priceList.storeCode
+                                .split(",")
+                                .filter((s: string) => s.trim()).length
                             : 0;
 
                           // Allow editing only if admin OR price list is for single store
@@ -1137,14 +1239,14 @@ export function PriceListManagement() {
                                   handlePriceInputChange(
                                     priceListId,
                                     product.id,
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                                 onBlur={(e) =>
                                   handlePriceSave(
                                     priceListId,
                                     product.id,
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                                 onKeyDown={(e) => {
@@ -1155,17 +1257,20 @@ export function PriceListManagement() {
                                     handlePriceSave(
                                       priceListId,
                                       product.id,
-                                      e.currentTarget.value
+                                      e.currentTarget.value,
                                     );
 
                                     // Move to next cell
                                     const nextColIndex = colIndex + 1;
-                                    if (nextColIndex < selectedPriceLists.length) {
+                                    if (
+                                      nextColIndex < selectedPriceLists.length
+                                    ) {
                                       // Move to next column in same row
                                       setTimeout(() => {
-                                        const nextInput = document.querySelector(
-                                          `[data-price-input="${product.id}-${nextColIndex}"]`
-                                        ) as HTMLInputElement;
+                                        const nextInput =
+                                          document.querySelector(
+                                            `[data-price-input="${product.id}-${nextColIndex}"]`,
+                                          ) as HTMLInputElement;
                                         if (nextInput) {
                                           nextInput.focus();
                                           nextInput.select();
@@ -1173,15 +1278,23 @@ export function PriceListManagement() {
                                       }, 50);
                                     } else {
                                       // Move to first column of next row
-                                      const currentRowIndex = paginatedProducts.findIndex(
-                                        (p) => p.id === product.id
-                                      );
-                                      if (currentRowIndex < paginatedProducts.length - 1) {
-                                        const nextProduct = paginatedProducts[currentRowIndex + 1];
+                                      const currentRowIndex =
+                                        paginatedProducts.findIndex(
+                                          (p) => p.id === product.id,
+                                        );
+                                      if (
+                                        currentRowIndex <
+                                        paginatedProducts.length - 1
+                                      ) {
+                                        const nextProduct =
+                                          paginatedProducts[
+                                            currentRowIndex + 1
+                                          ];
                                         setTimeout(() => {
-                                          const nextInput = document.querySelector(
-                                            `[data-price-input="${nextProduct.id}-0"]`
-                                          ) as HTMLInputElement;
+                                          const nextInput =
+                                            document.querySelector(
+                                              `[data-price-input="${nextProduct.id}-0"]`,
+                                            ) as HTMLInputElement;
                                           if (nextInput) {
                                             nextInput.focus();
                                             nextInput.select();
@@ -1195,7 +1308,11 @@ export function PriceListManagement() {
                                 min="0"
                                 step="1000"
                                 disabled={!canEdit}
-                                title={!canEdit ? "Chỉ admin mới có quyền sửa giá cho bảng giá áp dụng nhiều cửa hàng" : ""}
+                                title={
+                                  !canEdit
+                                    ? "Chỉ admin mới có quyền sửa giá cho bảng giá áp dụng nhiều cửa hàng"
+                                    : ""
+                                }
                               />
                             </TableCell>
                           );
@@ -1217,23 +1334,30 @@ export function PriceListManagement() {
                                 return;
                               }
 
-                              if (deleteProductFromPriceListMutation.isPending) {
+                              if (
+                                deleteProductFromPriceListMutation.isPending
+                              ) {
                                 return;
                               }
 
                               try {
                                 let successCount = 0;
                                 for (const priceListId of selectedPriceLists) {
-                                  await deleteProductFromPriceListMutation.mutateAsync({
-                                    priceListId,
-                                    productId: product.id,
-                                  });
+                                  await deleteProductFromPriceListMutation.mutateAsync(
+                                    {
+                                      priceListId,
+                                      productId: product.id,
+                                    },
+                                  );
                                   successCount++;
                                 }
 
-                                await queryClient.refetchQueries({ 
-                                  queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
-                                  exact: true 
+                                await queryClient.refetchQueries({
+                                  queryKey: [
+                                    "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items",
+                                    selectedPriceLists,
+                                  ],
+                                  exact: true,
                                 });
 
                                 toast({
@@ -1241,16 +1365,24 @@ export function PriceListManagement() {
                                   description: `Đã xóa sản phẩm khỏi ${successCount} bảng giá`,
                                 });
                               } catch (error) {
-                                console.error('Error deleting product from price list:', error);
+                                console.error(
+                                  "Error deleting product from price list:",
+                                  error,
+                                );
                                 toast({
                                   title: "Lỗi",
-                                  description: error instanceof Error ? error.message : "Không thể xóa sản phẩm",
+                                  description:
+                                    error instanceof Error
+                                      ? error.message
+                                      : "Không thể xóa sản phẩm",
                                   variant: "destructive",
                                 });
                               }
                             }}
                             className="h-8 w-8 p-0 hover:bg-red-50"
-                            disabled={deleteProductFromPriceListMutation.isPending}
+                            disabled={
+                              deleteProductFromPriceListMutation.isPending
+                            }
                           >
                             <Trash2 className="w-4 h-4 text-red-500" />
                           </Button>
@@ -1265,7 +1397,8 @@ export function PriceListManagement() {
             {/* Footer with Pagination */}
             <div className="mt-4 flex items-center justify-between">
               <div className="text-sm text-gray-500">
-                {t("settings.displayingProducts")} {filteredProducts.length} {t("settings.productsCount")}
+                {t("settings.displayingProducts")} {filteredProducts.length}{" "}
+                {t("settings.productsCount")}
                 {filteredProducts.length > 0 && (
                   <span className="ml-2">
                     ({t("common.page")} {currentPage}/{totalPages})
@@ -1276,7 +1409,9 @@ export function PriceListManagement() {
               {filteredProducts.length > 0 && (
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">{t("settings.itemsPerPageLabel")}</span>
+                    <span className="text-sm">
+                      {t("settings.itemsPerPageLabel")}
+                    </span>
                     <Select
                       value={pageSize.toString()}
                       onValueChange={(value) => {
@@ -1294,7 +1429,9 @@ export function PriceListManagement() {
                         <SelectItem value="100">100</SelectItem>
                       </SelectContent>
                     </Select>
-                    <span className="text-sm">{t("settings.productsCount")}</span>
+                    <span className="text-sm">
+                      {t("settings.productsCount")}
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -1309,7 +1446,9 @@ export function PriceListManagement() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.max(1, prev - 1))
+                      }
                       disabled={currentPage === 1}
                     >
                       {t("settings.previousPage")}
@@ -1320,7 +1459,9 @@ export function PriceListManagement() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                      }
                       disabled={currentPage === totalPages}
                     >
                       {t("settings.nextPage")}
@@ -1359,14 +1500,22 @@ export function PriceListManagement() {
                   className="pl-10"
                 />
               </div>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <Select
+                value={selectedCategory}
+                onValueChange={setSelectedCategory}
+              >
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder={t("settings.categoryName")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{t("settings.allProductGroups")}</SelectItem>
+                  <SelectItem value="all">
+                    {t("settings.allProductGroups")}
+                  </SelectItem>
                   {categories.map((category: Category) => (
-                    <SelectItem key={category.id} value={category.id.toString()}>
+                    <SelectItem
+                      key={category.id}
+                      value={category.id.toString()}
+                    >
                       {category.name}
                     </SelectItem>
                   ))}
@@ -1383,22 +1532,36 @@ export function PriceListManagement() {
                         type="checkbox"
                         onChange={(e) => {
                           if (e.target.checked) {
-                            const availableProducts = allProducts.filter((product: Product) => {
-                              const matchesSearch =
-                                product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                product.sku.toLowerCase().includes(searchTerm.toLowerCase());
-                              const matchesCategory =
-                                selectedCategory === "all" ||
-                                product.categoryId.toString() === selectedCategory;
+                            const availableProducts = allProducts.filter(
+                              (product: Product) => {
+                                const matchesSearch =
+                                  product.name
+                                    .toLowerCase()
+                                    .includes(searchTerm.toLowerCase()) ||
+                                  product.sku
+                                    .toLowerCase()
+                                    .includes(searchTerm.toLowerCase());
+                                const matchesCategory =
+                                  selectedCategory === "all" ||
+                                  product.categoryId.toString() ===
+                                    selectedCategory;
 
-                              // Check if product is not already in selected price lists
-                              const notInPriceList = !priceListItemsData.some(
-                                (item: PriceListItem) => item.productId === product.id
-                              );
+                                // Check if product is not already in selected price lists
+                                const notInPriceList = !priceListItemsData.some(
+                                  (item: PriceListItem) =>
+                                    item.productId === product.id,
+                                );
 
-                              return matchesSearch && matchesCategory && notInPriceList;
-                            });
-                            setSelectedProducts(availableProducts.map((p: Product) => p.id));
+                                return (
+                                  matchesSearch &&
+                                  matchesCategory &&
+                                  notInPriceList
+                                );
+                              },
+                            );
+                            setSelectedProducts(
+                              availableProducts.map((p: Product) => p.id),
+                            );
                           } else {
                             setSelectedProducts([]);
                           }
@@ -1415,15 +1578,19 @@ export function PriceListManagement() {
                   {allProducts
                     .filter((product: Product) => {
                       const matchesSearch =
-                        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+                        product.name
+                          .toLowerCase()
+                          .includes(searchTerm.toLowerCase()) ||
+                        product.sku
+                          .toLowerCase()
+                          .includes(searchTerm.toLowerCase());
                       const matchesCategory =
                         selectedCategory === "all" ||
                         product.categoryId.toString() === selectedCategory;
 
                       // Only show products not already in selected price lists
                       const notInPriceList = !priceListItemsData.some(
-                        (item: PriceListItem) => item.productId === product.id
+                        (item: PriceListItem) => item.productId === product.id,
                       );
 
                       return matchesSearch && matchesCategory && notInPriceList;
@@ -1436,40 +1603,56 @@ export function PriceListManagement() {
                             checked={selectedProducts.includes(product.id)}
                             onChange={(e) => {
                               if (e.target.checked) {
-                                setSelectedProducts([...selectedProducts, product.id]);
+                                setSelectedProducts([
+                                  ...selectedProducts,
+                                  product.id,
+                                ]);
                               } else {
                                 setSelectedProducts(
-                                  selectedProducts.filter((id) => id !== product.id)
+                                  selectedProducts.filter(
+                                    (id) => id !== product.id,
+                                  ),
                                 );
                               }
                             }}
                             className="w-4 h-4"
                           />
                         </TableCell>
-                        <TableCell className="font-mono text-sm">{product.sku}</TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {product.sku}
+                        </TableCell>
                         <TableCell>{product.name}</TableCell>
                         <TableCell>
-                          {categories.find((c: Category) => c.id === product.categoryId)?.name || "-"}
+                          {categories.find(
+                            (c: Category) => c.id === product.categoryId,
+                          )?.name || "-"}
                         </TableCell>
                       </TableRow>
                     ))}
                   {allProducts.filter((product: Product) => {
                     const matchesSearch =
-                      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+                      product.name
+                        .toLowerCase()
+                        .includes(searchTerm.toLowerCase()) ||
+                      product.sku
+                        .toLowerCase()
+                        .includes(searchTerm.toLowerCase());
                     const matchesCategory =
                       selectedCategory === "all" ||
                       product.categoryId.toString() === selectedCategory;
 
                     // Only show products not already in selected price lists
                     const notInPriceList = !priceListItemsData.some(
-                      (item: PriceListItem) => item.productId === product.id
+                      (item: PriceListItem) => item.productId === product.id,
                     );
 
                     return matchesSearch && matchesCategory && notInPriceList;
                   }).length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                      <TableCell
+                        colSpan={4}
+                        className="text-center py-8 text-gray-500"
+                      >
                         {t("settings.productsNotInPriceList")}
                       </TableCell>
                     </TableRow>
@@ -1492,7 +1675,9 @@ export function PriceListManagement() {
             </Button>
             <Button
               onClick={handleAddProducts}
-              disabled={selectedProducts.length === 0 || addProductsMutation.isPending}
+              disabled={
+                selectedProducts.length === 0 || addProductsMutation.isPending
+              }
             >
               {addProductsMutation.isPending
                 ? t("settings.addingProducts")
@@ -1560,9 +1745,14 @@ export function PriceListManagement() {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("settings.confirmDeletePriceListTitle")}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("settings.confirmDeletePriceListTitle")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {t("settings.confirmDeletePriceListDesc").replace("{name}", priceListToDelete?.name || "")}
+              {t("settings.confirmDeletePriceListDesc").replace(
+                "{name}",
+                priceListToDelete?.name || "",
+              )}
               <br />
               <br />
               {t("settings.deletePriceListWarning")}
@@ -1582,7 +1772,9 @@ export function PriceListManagement() {
               className="bg-red-600 hover:bg-red-700"
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? t("common.deleting") : t("settings.deletePriceListAction")}
+              {deleteMutation.isPending
+                ? t("common.deleting")
+                : t("settings.deletePriceListAction")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1593,14 +1785,21 @@ export function PriceListManagement() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {editingPriceList ? t("settings.editPriceList") : t("settings.createPriceList")}
+              {editingPriceList
+                ? t("settings.editPriceList")
+                : t("settings.createPriceList")}
             </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="code">
-                {t("settings.priceListCode")} {!editingPriceList && <span className="text-xs text-gray-500">(Tự động tạo nếu để trống)</span>}
+                {t("settings.priceListCode")}{" "}
+                {!editingPriceList && (
+                  <span className="text-xs text-gray-500">
+                    (Tự động tạo nếu để trống)
+                  </span>
+                )}
                 {editingPriceList && <span className="text-red-500">*</span>}
               </Label>
               <Input
@@ -1609,9 +1808,15 @@ export function PriceListManagement() {
                 onChange={(e) =>
                   setPriceListForm({ ...priceListForm, code: e.target.value })
                 }
-                placeholder={editingPriceList ? "Nhập mã bảng giá" : "Để trống để tự động tạo (VD: BG-0000001)"}
+                placeholder={
+                  editingPriceList
+                    ? "Nhập mã bảng giá"
+                    : "Để trống để tự động tạo (VD: BG-0000001)"
+                }
                 required={editingPriceList}
-                disabled={!editingPriceList && nextCodeData?.code ? false : false}
+                disabled={
+                  !editingPriceList && nextCodeData?.code ? false : false
+                }
               />
               {!editingPriceList && nextCodeData?.code && (
                 <p className="text-xs text-green-600">
@@ -1622,7 +1827,8 @@ export function PriceListManagement() {
 
             <div className="space-y-2">
               <Label htmlFor="name">
-                {t("settings.priceListName")} <span className="text-red-500">*</span>
+                {t("settings.priceListName")}{" "}
+                <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="name"
@@ -1636,7 +1842,9 @@ export function PriceListManagement() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">{t("settings.priceListDescription")}</Label>
+              <Label htmlFor="description">
+                {t("settings.priceListDescription")}
+              </Label>
               <Input
                 id="description"
                 value={priceListForm.description}
@@ -1656,14 +1864,18 @@ export function PriceListManagement() {
               </Label>
               <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
                 {availableStores.length === 0 ? (
-                  <p className="text-sm text-gray-500">Không có chi nhánh nào</p>
+                  <p className="text-sm text-gray-500">
+                    Không có chi nhánh nào
+                  </p>
                 ) : (
                   availableStores.map((store: any) => (
                     <div key={store.id} className="flex items-center space-x-2">
                       <input
                         type="checkbox"
                         id={`store-${store.id}`}
-                        checked={priceListForm.storeCodes.includes(store.storeCode)}
+                        checked={priceListForm.storeCodes.includes(
+                          store.storeCode,
+                        )}
                         onChange={(e) => {
                           if (e.target.checked) {
                             // Nếu không phải admin, chỉ cho chọn 1 chi nhánh
@@ -1675,14 +1887,17 @@ export function PriceListManagement() {
                             } else {
                               setPriceListForm({
                                 ...priceListForm,
-                                storeCodes: [...priceListForm.storeCodes, store.storeCode],
+                                storeCodes: [
+                                  ...priceListForm.storeCodes,
+                                  store.storeCode,
+                                ],
                               });
                             }
                           } else {
                             setPriceListForm({
                               ...priceListForm,
                               storeCodes: priceListForm.storeCodes.filter(
-                                (code) => code !== store.storeCode
+                                (code) => code !== store.storeCode,
                               ),
                             });
                           }
@@ -1700,8 +1915,8 @@ export function PriceListManagement() {
                 )}
               </div>
               <p className="text-xs text-gray-500">
-                {isAdmin 
-                  ? "Bạn có thể chọn nhiều cửa hàng" 
+                {isAdmin
+                  ? "Bạn có thể chọn nhiều cửa hàng"
                   : "Bạn chỉ có thể chọn 1 chi nhánh được phân quyền"}
               </p>
             </div>
@@ -1714,14 +1929,14 @@ export function PriceListManagement() {
               >
                 {t("common.cancel")}
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
-                {(createMutation.isPending || updateMutation.isPending) 
-                  ? t("settings.savingPriceList") 
-                  : editingPriceList 
-                    ? t("settings.updatePriceList") 
+                {createMutation.isPending || updateMutation.isPending
+                  ? t("settings.savingPriceList")
+                  : editingPriceList
+                    ? t("settings.updatePriceList")
                     : t("settings.createPriceList")}
               </Button>
             </DialogFooter>

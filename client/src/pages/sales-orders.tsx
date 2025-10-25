@@ -418,10 +418,20 @@ export default function SalesOrders() {
         if (einvoiceStatusFilter && einvoiceStatusFilter !== "all") {
           params.append("einvoiceStatus", einvoiceStatusFilter);
         }
-        if (storeCodeFilter && storeCodeFilter !== "all") {
-          // Use storeFilter (not storeCode) to match API parameter name
+        
+        // Handle store filter based on conditions:
+        // 1. If admin and "all" selected -> load all stores (storeFilter = "all")
+        // 2. If non-admin and "all" selected -> load stores from parent field (storeFilter = "all", server will filter by parent)
+        // 3. If specific store selected -> load that store only (storeFilter = storeCode)
+        if (storeCodeFilter === "all") {
+          // Always pass "all" when "Tất cả" is selected
+          // The server will handle whether to show all stores (admin) or parent stores (non-admin)
+          params.append("storeFilter", "all");
+        } else if (storeCodeFilter) {
+          // Specific store selected - load exact data for that storeCode
           params.append("storeFilter", storeCodeFilter);
         }
+        
         params.append("page", currentPage.toString());
         if (itemsPerPage) {
           params.append("limit", itemsPerPage.toString());
@@ -1035,7 +1045,7 @@ export default function SalesOrders() {
   const getInvoiceStatusBadge = (status: number, order?: Order) => {
     const statusLabels = {
       1: t("common.completed"),
-      2: t("common.serving"),
+      2: t("orders.status.serving") || t("common.serving"),
       3: t("common.cancelled"),
     };
 
@@ -3022,10 +3032,6 @@ export default function SalesOrders() {
                   >
                     {storesData.filter((store: any) => store.typeUser !== 1).length > 1 && (
                       <option value="all">{t("common.allStores")}</option>
-                    )}
-                    {storesData.filter((store: any) => store.typeUser !== 1)
-                      .length > 1 && (
-                      <option value="all">{t("common.all")}</option>
                     )}
                     {storesData
                       .filter((store: any) => store.typeUser !== 1)

@@ -534,14 +534,14 @@ export function SpendingReport() {
         <CardContent className="space-y-4 pt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label>Cửa hàng</Label>
+              <Label>{t("common.storeLabel")}</Label>
               <Select value={storeFilter} onValueChange={setStoreFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Chọn cửa hàng" />
                 </SelectTrigger>
                 <SelectContent>
                   {storesData.filter((store: any) => store.typeUser !== 1).length > 1 && (
-                    <SelectItem value="all">Tất cả</SelectItem>
+                    <SelectItem value="all">{t("common.allStores")}</SelectItem>
                   )}
                   {storesData
                     .filter((store: any) => store.typeUser !== 1)

@@ -589,7 +589,7 @@ export function SalesReport() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="flex items-center gap-2">
                 <Label className="text-sm font-medium whitespace-nowrap">
-                  Cửa hàng:
+                  {t("reports.storeLabel")}
                 </Label>
                 <select
                   value={storeFilter}

@@ -636,6 +636,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     
     // Store filter
     storeFilterLabel: "매장:",
+    storeLabel: "매장",
     allStores: "모든 매장",
 
     // Stock status
@@ -1219,6 +1220,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     
     // Store filter
     storeFilterLabel: "Store:",
+    storeLabel: "Store",
     allStores: "All Stores",
 
     // Stock status
@@ -1442,6 +1444,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     customerGroup: "Nhóm khách hàng",
     walkInCustomer: "Khách hàng vãng lai",
     backToPOS: "Quay lại POS",
+    storeFilter: "Lọc theo cửa hàng",
 
     email: "Email",
 
@@ -1773,6 +1776,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     
     // Store filter
     storeFilterLabel: "Cửa hàng:",
+    storeLabel: "Cửa hàng",
     allStores: "Tất cả cửa hàng",
 
     // Stock status

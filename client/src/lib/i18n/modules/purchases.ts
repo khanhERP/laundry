@@ -282,6 +282,12 @@ export const purchasesTranslations = {
     unpaid: "미결제",
     changeAmount: "거스름돈",
     markAsPaidDescription: "이 입고 전표가 결제되었음을 표시",
+    
+    // Table column headers
+    notesColumn: "메모",
+    
+    // Export functionality
+    exportToExcel: "엑셀로 내보내기",
   },
 
   en: {
@@ -585,6 +591,12 @@ export const purchasesTranslations = {
     unpaid: "Unpaid",
     changeAmount: "Change",
     markAsPaidDescription: "Mark if this receipt has been paid",
+    
+    // Table column headers
+    notesColumn: "Notes",
+    
+    // Export functionality
+    exportToExcel: "Export to Excel",
   },
 
   vi: {
@@ -889,5 +901,11 @@ export const purchasesTranslations = {
     unpaid: "Chưa thanh toán",
     changeAmount: "Tiền thừa",
     markAsPaidDescription: "Đánh dấu nếu phiếu nhập đã được thanh toán",
+    
+    // Table column headers
+    notesColumn: "Ghi chú",
+    
+    // Export functionality
+    exportToExcel: "Xuất Excel",
   }
 };

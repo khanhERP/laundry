@@ -331,7 +331,14 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
   });
 
   const { data: customers } = useQuery({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers", customerSearch, customerStatus],
+    queryKey: [
+      "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers",
+      customerSearch,
+      customerStatus,
+      startDate,
+      endDate,
+      storeFilter, // Include store filter in query key
+    ],
     queryFn: async () => {
       const response = await fetch(
         `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers/${customerSearch || "all"}/${customerStatus}`,

@@ -211,6 +211,12 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
           order.status === "paid" || order.paymentStatus === "paid";
         if (!isPaid) return false;
 
+        // Apply store filter based on admin status
+        if (storeFilter !== "all") {
+          // Specific store selected
+          if (order.storeCode !== storeFilter) return false;
+        }
+
         // Apply payment method filter
         if (paymentMethodFilter !== "all") {
           // Check if payment method is multi-payment (JSON array)
@@ -275,6 +281,11 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
     // Add income transactions from income vouchers (thu)
     incomeVouchers
       .filter((voucher) => {
+        // Apply store filter
+        if (storeFilter !== "all") {
+          if (voucher.storeCode !== storeFilter) return false;
+        }
+
         // Apply payment method filter - income vouchers use 'account' field
         if (paymentMethodFilter !== "all") {
           return voucher.account === paymentMethodFilter;
@@ -304,6 +315,11 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
     // Add expense transactions from expense vouchers (chi)
     expenseVouchers
       .filter((voucher) => {
+        // Apply store filter
+        if (storeFilter !== "all") {
+          if (voucher.storeCode !== storeFilter) return false;
+        }
+
         // Apply payment method filter - expense vouchers use 'account' field
         if (paymentMethodFilter !== "all") {
           const matches = voucher.account === paymentMethodFilter;
@@ -346,6 +362,11 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
         // Filter 1: Must be expense type AND paid
         const isExpenseAndPaid = receipt.isPaid === true;
         if (!isExpenseAndPaid) return false;
+
+        // Apply store filter
+        if (storeFilter !== "all") {
+          if (receipt.storeCode !== storeFilter) return false;
+        }
 
         // Filter 2: Apply payment method filter
         if (paymentMethodFilter !== "all") {
@@ -524,6 +545,7 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
     startDate,
     endDate,
     paymentMethodFilter,
+    storeFilter,
   ]);
 
   // Filter transactions by type and recalculate summaries
@@ -704,15 +726,15 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                 {/* Store Filter */}
                 <div>
                   <Label className="text-sm font-bold text-gray-800 mb-3 block">
-                    Cửa hàng
+                    {t("common.storeLabel")}
                   </Label>
                   <Select value={storeFilter} onValueChange={setStoreFilter}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Chọn cửa hàng" />
+                      <SelectValue placeholder={t("common.storeLabel")} />
                     </SelectTrigger>
                     <SelectContent>
                       {storesData.filter((store: any) => store.typeUser !== 1).length > 1 && (
-                        <SelectItem value="all">Tất cả</SelectItem>
+                        <SelectItem value="all">{t("common.allStores")}</SelectItem>
                       )}
                       {storesData.filter((store: any) => store.typeUser !== 1).map((store: any) => (
                         <SelectItem key={store.id} value={store.storeCode}>
@@ -1122,28 +1144,6 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
             >
               <FileText className="w-4 h-4 mr-2" />
               {t("common.exportExcel")}
-            </Button>
-            <Button
-              onClick={() => {
-                setSelectedVoucher(null);
-                setVoucherMode("create");
-                setShowIncomeVoucherModal(true);
-              }}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              {t("common.createIncomeVoucher")}
-            </Button>
-            <Button
-              onClick={() => {
-                setSelectedVoucher(null);
-                setVoucherMode("create");
-                setShowExpenseVoucherModal(true);
-              }}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              <Minus className="w-4 h-4 mr-2" />
-              {t("common.createExpenseVoucher")}
             </Button>
           </div>
 

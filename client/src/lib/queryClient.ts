@@ -92,8 +92,9 @@ export const queryClient = new QueryClient({
       // queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: true,
-      staleTime: 0, // No cache
+      staleTime: 0, // No cache - always fetch fresh
       gcTime: 0, // Don't keep in memory
+      cacheTime: 0, // Disable cache completely
       retry: 1,
       refetchOnMount: true,
       refetchOnReconnect: true,
