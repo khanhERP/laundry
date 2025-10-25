@@ -53,7 +53,15 @@ export const getQueryFn: <T>(options: {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: defaultFetcher,
+      queryFn: async ({ queryKey }) => {
+        const url = queryKey.join("/");
+        console.log("🔍 Query fetching:", url);
+        const response = await apiRequest("GET", url);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      },
       refetchInterval: false,
       refetchOnWindowFocus: true,
       staleTime: 0, // No cache - always fetch fresh

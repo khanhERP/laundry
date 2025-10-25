@@ -51,17 +51,32 @@ export default function CustomersPage({ onLogout }: CustomersPageProps) {
 
   const isAdmin = userStore?.isAdmin || false;
 
-  // Fetch customers with refetch on mount
-  const { data: customersData, isLoading: customersLoading, refetch: refetchCustomers } = useQuery<Customer[]>({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers"],
-    staleTime: 0,
-    refetchOnMount: "always",
+  // Fetch customers with server-side pagination
+  const { data: customersResponse, isLoading: customersLoading, refetch: refetchCustomers } = useQuery({
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers", currentPage, pageSize, customerSearchTerm, storeFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: pageSize.toString(),
+        search: customerSearchTerm,
+        storeFilter: storeFilter,
+      });
+      const response = await fetch(`https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch customers');
+      return response.json();
+    },
+    staleTime: 30000,
+    gcTime: 60000,
   });
 
-  // Refetch customers when component mounts
-  useEffect(() => {
-    refetchCustomers();
-  }, [refetchCustomers]);
+  const customersData = customersResponse?.customers || [];
+  const pagination = customersResponse?.pagination || {
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    hasNext: false,
+    hasPrev: false,
+  };
 
   const handleEditCustomer = (customer: Customer) => {
     setEditingCustomer(customer);
@@ -106,33 +121,10 @@ export default function CustomersPage({ onLogout }: CustomersPageProps) {
     setEditingCustomer(null);
   };
 
-  // Filter customers based on search term and store
-  const allFilteredCustomers = customersData
-    ? customersData.filter(
-        (customer: Customer) => {
-          const matchesSearch =
-            customer.name.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
-            customer.customerId.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
-            (customer.phone && customer.phone.includes(customerSearchTerm));
-          
-          // Store filter - only apply if not "all" and user is admin
-          const matchesStore = storeFilter === "all" || !isAdmin || customer.storeCode === storeFilter;
-          
-          return matchesSearch && matchesStore;
-        }
-      )
-    : [];
-
-  // Pagination
-  const totalPages = Math.ceil(allFilteredCustomers.length / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const filteredCustomers = allFilteredCustomers.slice(startIndex, endIndex);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [customerSearchTerm, storeFilter]);
+  // Use server-side filtered and paginated data
+  const filteredCustomers = customersData;
+  const totalPages = pagination.totalPages;
+  const allFilteredCustomers = customersData; // For total count display
 
   return (
     <div className="min-h-screen bg-green-50 grocery-bg">
@@ -389,7 +381,7 @@ export default function CustomersPage({ onLogout }: CustomersPageProps) {
               <div className="flex justify-between items-center mt-6">
                 <div className="flex items-center gap-4">
                   <div className="text-sm text-gray-600">
-                    {t("customers.total")} {allFilteredCustomers.length}{" "}
+                    {t("customers.total")} {pagination.totalCount}{" "}
                     {t("customers.totalCustomersRegistered")}
                   </div>
                   <div className="flex items-center gap-2">
@@ -425,28 +417,28 @@ export default function CustomersPage({ onLogout }: CustomersPageProps) {
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => setCurrentPage(1)}
-                          disabled={currentPage === 1}
+                          disabled={!pagination.hasPrev}
                           className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 w-8"
                         >
                           «
                         </button>
                         <button
-                          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                          disabled={currentPage === 1}
+                          onClick={() => setCurrentPage((prev) => prev - 1)}
+                          disabled={!pagination.hasPrev}
                           className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 w-8"
                         >
                           ‹
                         </button>
                         <button
-                          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                          disabled={currentPage === totalPages}
+                          onClick={() => setCurrentPage((prev) => prev + 1)}
+                          disabled={!pagination.hasNext}
                           className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 w-8"
                         >
                           ›
                         </button>
                         <button
                           onClick={() => setCurrentPage(totalPages)}
-                          disabled={currentPage === totalPages}
+                          disabled={!pagination.hasNext}
                           className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 w-8"
                         >
                           »
