@@ -809,39 +809,57 @@ export default function SalesOrders() {
   // Mutation for canceling a single order
   const cancelOrderMutation = useMutation({
     mutationFn: async (orderId: number) => {
-      // Changed to accept orderId
-      const response = await apiRequest(
-        "PUT",
-        `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/${orderId}/status`,
-        {
-          status: "cancelled",
-        },
-      );
-
-      if (!response.ok) {
-        let errorMessage = `HTTP ${response.status}`;
-        try {
-          const errorData = await response.text();
-          errorMessage = errorData || errorMessage;
-        } catch (textError) {
-          console.error("Could not parse error response:", textError);
-        }
-        throw new Error(`Không thể hủy đơn hàng: ${errorMessage}`);
-      }
-
       try {
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          return await response.json();
-        } else {
+        console.log(`🔄 Canceling order ${orderId} with status: cancelled`);
+        
+        // Ensure we send the correct payload
+        const payload = {
+          status: "cancelled",
+        };
+        
+        console.log(`📤 Sending cancel order payload:`, payload);
+        
+        const response = await apiRequest(
+          "PUT",
+          `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/${orderId}/status`,
+          payload,
+        );
+
+        console.log(`📡 Cancel order API response status:`, response.status);
+
+        if (!response.ok) {
+          let errorMessage = `HTTP ${response.status}`;
+          try {
+            const errorData = await response.text();
+            console.error(`❌ Cancel order API error:`, errorData);
+            errorMessage = errorData || errorMessage;
+          } catch (textError) {
+            console.error("Could not parse error response:", textError);
+          }
+          throw new Error(`Không thể hủy đơn hàng: ${errorMessage}`);
+        }
+
+        // Try to parse JSON response
+        try {
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const result = await response.json();
+            console.log(`✅ Cancel order API success:`, result);
+            return result;
+          } else {
+            console.log(`✅ Cancel order API success (non-JSON response)`);
+            return { success: true, message: "Order cancelled successfully" };
+          }
+        } catch (jsonError) {
+          console.warn(
+            "Response is not valid JSON, but request was successful:",
+            jsonError,
+          );
           return { success: true, message: "Order cancelled successfully" };
         }
-      } catch (jsonError) {
-        console.warn(
-          "Response is not valid JSON, but request was successful:",
-          jsonError,
-        );
-        return { success: true, message: "Order cancelled successfully" };
+      } catch (error) {
+        console.error("Error in cancelOrderMutation:", error);
+        throw error;
       }
     },
     onSuccess: async (data, orderId) => {
@@ -4402,8 +4420,7 @@ export default function SalesOrders() {
                                                                               editedOrderItems[
                                                                                 it
                                                                                   .id
-                                                                              ] ||
-                                                                              {};
+                                                                              ] || {};
                                                                             const itPrice =
                                                                               parseFloat(
                                                                                 editedIt.unitPrice !==

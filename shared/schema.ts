@@ -165,7 +165,9 @@ export const suppliers = pgTable("suppliers", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export const purchaseReceipts = pgTable("purchase_receipts", {
@@ -263,6 +265,7 @@ export const orders = pgTable("orders", {
   orderNumber: text("order_number").notNull().unique(),
   tableId: integer("table_id").references(() => tables.id),
   employeeId: integer("employee_id").references(() => employees.id),
+  customerId: integer("customer_id").references(() => customers.id), // Add customerId field
   status: text("status").notNull().default("pending"), // "pending", "confirmed", "preparing", "ready", "served", "paid", "cancelled"
   customerName: text("customer_name"),
   customerPhone: text("customer_phone"), // Add customer phone field
@@ -462,6 +465,7 @@ export const insertOrderSchema = createInsertSchema(orders)
   })
   .extend({
     tableId: z.number().nullable().optional(),
+    customerId: z.number().nullable().optional(), // Added customerId to InsertOrder schema
     status: z.enum(
       [
         "pending",
@@ -983,6 +987,10 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     fields: [orders.employeeId],
     references: [employees.id],
   }),
+  customer: one(customers, {
+    fields: [orders.customerId],
+    references: [customers.id],
+  }),
   items: many(orderItems),
 }));
 
@@ -999,6 +1007,7 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
 
 export const customersRelations = relations(customers, ({ many }) => ({
   pointTransactions: many(pointTransactions),
+  orders: many(orders),
 }));
 
 export const pointTransactionsRelations = relations(
@@ -1166,16 +1175,20 @@ export type InsertPaymentMethod = typeof paymentMethods.$inferInsert;
 // Price Lists table
 export const priceLists = pgTable("price_lists", {
   id: serial("id").primaryKey(),
-  code: text("code").notNull().unique(),
-  name: text("name").notNull(),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  storeCode: text("store_code"),
-  isActive: boolean("is_active").default(true),
-  isDefault: boolean("is_default").default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  isDefault: boolean("is_default").notNull().default(false),
   validFrom: timestamp("valid_from", { withTimezone: true }),
   validTo: timestamp("valid_to", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  storeCode: varchar("store_code", { length: 50 }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 // Price List Items table

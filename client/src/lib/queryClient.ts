@@ -11,44 +11,27 @@ async function throwIfResNotOk(res: Response) {
 export async function apiRequest(
   method: string,
   url: string,
-  body?: any,
+  data?: any,
 ): Promise<Response> {
-  const headers = new Headers();
-
-  if (!headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
-  }
-
-  // Always include auth token if available
-  const token = localStorage.getItem("authToken");
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
-    console.log("✅ Auth token included in request to:", url);
-  } else {
-    console.warn("⚠️ No auth token available for request to:", url);
-  }
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
 
   const options: RequestInit = {
     method,
     headers,
-    credentials: "include", // Always send cookies
+    credentials: "include",
   };
 
-  if (body && (method === "POST" || method === "PUT" || method === "PATCH")) {
-    options.body = JSON.stringify(body);
+  if (data) {
+    options.body = JSON.stringify(data);
+    console.log(`🌐 API Request: ${method} ${url}`, {
+      payload: data,
+      stringified: JSON.stringify(data),
+    });
   }
 
-  const response = await fetch(url, options);
-
-  // Handle token expiration
-  if (response.status === 401) {
-    console.warn("⚠️ Token expired or invalid, redirecting to login...");
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userData");
-    window.location.href = "/";
-  }
-
-  return response;
+  return fetch(url, options);
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

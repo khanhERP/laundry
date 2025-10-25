@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+
+import { useState, useEffect, useMemo, Component, ErrorInfo, ReactNode } from "react";
 import { POSHeader } from "@/components/pos/header";
 import { RightSidebar } from "@/components/ui/right-sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -62,6 +63,46 @@ import { GeneralSettingsContent } from "@/components/settings/general-settings-c
 interface ReportsPageProps {
   onLogout?: () => void;
 }
+
+// Error Boundary Component
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Report Error Boundary caught an error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="text-red-600 text-lg mb-4">
+            Đã xảy ra lỗi khi tải báo cáo
+          </div>
+          <button
+            onClick={() => this.setState({ hasError: false })}
+            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+          >
+            Thử lại
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 
 export default function ReportsPage({ onLogout }: ReportsPageProps) {
   const { t } = useTranslation();
@@ -1064,7 +1105,9 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                 )}
 
                 <TabsContent value="spending">
-                  <SalesChartReport />
+                  <ErrorBoundary>
+                    <SalesChartReport />
+                  </ErrorBoundary>
                 </TabsContent>
 
                 <TabsContent value="expense">

@@ -1,11 +1,32 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { UserCheck, Users, CreditCard, Plus, Edit, Trash2, Search } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import {
+  UserCheck,
+  Users,
+  CreditCard,
+  Plus,
+  Edit,
+  Trash2,
+  Search,
+} from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import type { Customer } from "@shared/schema";
@@ -18,18 +39,46 @@ export default function CustomersPageContent() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [customerSearchTerm, setCustomerSearchTerm] = useState("");
   const [showMembershipModal, setShowMembershipModal] = useState(false);
   const [showPointsModal, setShowPointsModal] = useState(false);
-  const [showPointsManagementModal, setShowPointsManagementModal] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [showPointsManagementModal, setShowPointsManagementModal] =
+    useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null,
+  );
+  const [storeFilter, setStoreFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
-  const { data: customersData, isLoading: customersLoading } = useQuery<Customer[]>({
+  // Fetch store settings to get user's store info
+  const { data: userStore } = useQuery({
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings"],
+  });
+
+  // Fetch store list for admin users
+  const { data: storesData, isLoading: storesLoading } = useQuery({
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list"],
+  });
+
+  const isAdmin = userStore?.isAdmin || false;
+
+  // Fetch customers with refetch on mount
+  const {
+    data: customersData,
+    isLoading: customersLoading,
+    refetch: refetchCustomers,
+  } = useQuery<Customer[]>({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers"],
   });
+
+  // Refetch customers when component mounts
+  useEffect(() => {
+    refetchCustomers();
+  }, [refetchCustomers]);
 
   const handleEditCustomer = (customer: Customer) => {
     setEditingCustomer(customer);
@@ -40,13 +89,23 @@ export default function CustomersPageContent() {
     if (!confirm(t("customers.confirmDelete"))) return;
 
     try {
-      const response = await fetch(`https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers/${customerId}`, { method: "DELETE" });
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const response = await fetch(`https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers/${customerId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
 
       await queryClient.refetchQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers"] });
-      toast({ title: t("common.success"), description: t("settings.customerDeleteSuccess") });
+      toast({
+        title: t("common.success"),
+        description: t("settings.customerDeleteSuccess"),
+      });
     } catch (error) {
-      toast({ title: t("common.error"), description: t("settings.customerDeleteError"), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: t("settings.customerDeleteError"),
+        variant: "destructive",
+      });
     }
   };
 
@@ -55,11 +114,35 @@ export default function CustomersPageContent() {
     setShowPointsModal(true);
   };
 
-  const filteredCustomers = customersData?.filter((customer: Customer) =>
-    customer.name.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
-    customer.customerId.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
-    (customer.phone && customer.phone.includes(customerSearchTerm))
-  ) || [];
+  // Filter customers by search term and store
+  const allFilteredCustomers =
+    customersData?.filter((customer: Customer) => {
+      const matchesSearch =
+        customer.name
+          .toLowerCase()
+          .includes(customerSearchTerm.toLowerCase()) ||
+        customer.customerId
+          .toLowerCase()
+          .includes(customerSearchTerm.toLowerCase()) ||
+        (customer.phone && customer.phone.includes(customerSearchTerm));
+
+      // Store filter - only apply if not "all" and user is admin
+      const matchesStore =
+        storeFilter === "all" || !isAdmin || customer.storeCode === storeFilter;
+
+      return matchesSearch && matchesStore;
+    }) || [];
+
+  // Pagination
+  const totalPages = Math.ceil(allFilteredCustomers.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const filteredCustomers = allFilteredCustomers.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [customerSearchTerm, storeFilter]);
 
   return (
     <div className="space-y-6">
@@ -69,8 +152,12 @@ export default function CustomersPageContent() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">{t("customers.totalCustomers")}</p>
-                <p className="text-2xl font-bold text-green-600">{customersData?.length || 0}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  {t("customers.totalCustomers")}
+                </p>
+                <p className="text-2xl font-bold text-green-600">
+                  {customersData?.length || 0}
+                </p>
               </div>
               <UserCheck className="w-8 h-8 text-green-600" />
             </div>
@@ -81,9 +168,12 @@ export default function CustomersPageContent() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">{t("customers.activeCustomers")}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  {t("customers.activeCustomers")}
+                </p>
                 <p className="text-2xl font-bold text-blue-600">
-                  {customersData?.filter((c) => c.status === "active").length || 0}
+                  {customersData?.filter((c) => c.status === "active").length ||
+                    0}
                 </p>
               </div>
               <Users className="w-8 h-8 text-blue-600" />
@@ -95,9 +185,13 @@ export default function CustomersPageContent() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">{t("customers.pointsIssued")}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  {t("customers.pointsIssued")}
+                </p>
                 <p className="text-2xl font-bold text-purple-600">
-                  {customersData?.reduce((total, c) => total + (c.points || 0), 0).toLocaleString() || 0}
+                  {customersData
+                    ?.reduce((total, c) => total + (c.points || 0), 0)
+                    .toLocaleString() || 0}
                 </p>
               </div>
               <CreditCard className="w-8 h-8 text-purple-600" />
@@ -109,11 +203,19 @@ export default function CustomersPageContent() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">{t("customers.averageSpent")}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  {t("customers.averageSpent")}
+                </p>
                 <p className="text-2xl font-bold text-orange-600">
                   {customersData && customersData.length > 0
-                    ? Math.round(customersData.reduce((total, c) => total + parseFloat(c.totalSpent || "0"), 0) / customersData.length).toLocaleString()
-                    : "0"} ₫
+                    ? Math.round(
+                        customersData.reduce(
+                          (total, c) => total + parseFloat(c.totalSpent || "0"),
+                          0,
+                        ) / customersData.length,
+                      ).toLocaleString()
+                    : "0"}{" "}
+                  ₫
                 </p>
               </div>
               <CreditCard className="w-8 h-8 text-orange-600" />
@@ -148,6 +250,32 @@ export default function CustomersPageContent() {
                 value={customerSearchTerm}
                 onChange={(e) => setCustomerSearchTerm(e.target.value)}
               />
+              {isAdmin && (
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm whitespace-nowrap">
+                    Chi nhánh:
+                  </Label>
+                  <Select
+                    value={storeFilter}
+                    onValueChange={setStoreFilter}
+                    disabled={storesLoading}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Tất cả chi nhánh" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tất cả chi nhánh</SelectItem>
+                      {storesData
+                        ?.filter((store: any) => store.typeUser !== 1)
+                        .map((store: any) => (
+                          <SelectItem key={store.id} value={store.storeCode}>
+                            {store.storeName || store.storeCode}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <Button variant="outline" size="sm">
                 <Search className="w-4 h-4 mr-2" />
                 {t("common.search")}
@@ -157,12 +285,16 @@ export default function CustomersPageContent() {
 
           {customersLoading ? (
             <div className="text-center py-8">
-              <p className="text-gray-500">{t("customers.loadingCustomerData")}</p>
+              <p className="text-gray-500">
+                {t("customers.loadingCustomerData")}
+              </p>
             </div>
           ) : filteredCustomers.length === 0 ? (
             <div className="text-center py-8">
               <UserCheck className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500">{t("customers.noRegisteredCustomers")}</p>
+              <p className="text-gray-500">
+                {t("customers.noRegisteredCustomers")}
+              </p>
             </div>
           ) : (
             <div className="rounded-md border">
@@ -179,13 +311,23 @@ export default function CustomersPageContent() {
 
               <div className="divide-y">
                 {filteredCustomers.map((customer) => (
-                  <div key={customer.id} className="grid grid-cols-8 gap-4 p-4 items-center">
-                    <div className="font-mono text-sm">{customer.customerId}</div>
+                  <div
+                    key={customer.id}
+                    className="grid grid-cols-8 gap-4 p-4 items-center"
+                  >
+                    <div className="font-mono text-sm">
+                      {customer.customerId}
+                    </div>
                     <div className="font-medium">{customer.name}</div>
-                    <div className="text-sm text-gray-600">{customer.phone || "-"}</div>
-                    <div className="text-center">{customer.visitCount || 0}</div>
+                    <div className="text-sm text-gray-600">
+                      {customer.phone || "-"}
+                    </div>
+                    <div className="text-center">
+                      {customer.visitCount || 0}
+                    </div>
                     <div className="text-sm font-medium">
-                      {parseFloat(customer.totalSpent || "0").toLocaleString()} ₫
+                      {parseFloat(customer.totalSpent || "0").toLocaleString()}{" "}
+                      ₫
                     </div>
                     <div className="text-center">
                       <Button
@@ -220,7 +362,11 @@ export default function CustomersPageContent() {
                       </Badge>
                     </div>
                     <div className="flex items-center justify-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleEditCustomer(customer)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditCustomer(customer)}
+                      >
                         <Edit className="w-4 h-4" />
                       </Button>
                       <Button
@@ -247,18 +393,92 @@ export default function CustomersPageContent() {
           )}
 
           <div className="flex justify-between items-center mt-6">
-            <div className="text-sm text-gray-600">
-              {t("customers.total")} {customersData?.length || 0} {t("customers.totalCustomersRegistered")}
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-600">
+                {t("customers.total")} {allFilteredCustomers.length}{" "}
+                {t("customers.totalCustomersRegistered")}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">{t("common.show")}</span>
+                <Select
+                  value={pageSize.toString()}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value));
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent side="top">
+                    <SelectItem value="15">15</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="30">30</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm font-medium">{t("common.rows")}</span>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowMembershipModal(true)}>
-                <UserCheck className="w-4 h-4 mr-2" />
-                {t("customers.membershipManagement")}
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowPointsManagementModal(true)}>
-                <CreditCard className="w-4 h-4 mr-2" />
-                {t("customers.pointsManagement")}
-              </Button>
+            
+            <div className="flex items-center gap-4">
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">
+                    {t("common.page")} {currentPage} / {totalPages}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                      className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 w-8"
+                    >
+                      «
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 w-8"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 w-8"
+                    >
+                      ›
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 w-8"
+                    >
+                      »
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowMembershipModal(true)}
+                >
+                  <UserCheck className="w-4 h-4 mr-2" />
+                  {t("customers.membershipManagement")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPointsManagementModal(true)}
+                >
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  {t("customers.pointsManagement")}
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -267,7 +487,10 @@ export default function CustomersPageContent() {
       {/* Modals */}
       <CustomerFormModal
         isOpen={showCustomerForm}
-        onClose={() => { setShowCustomerForm(false); setEditingCustomer(null); }}
+        onClose={() => {
+          setShowCustomerForm(false);
+          setEditingCustomer(null);
+        }}
         customer={editingCustomer}
       />
 
@@ -280,8 +503,14 @@ export default function CustomersPageContent() {
         />
       )}
 
-      <MembershipModal isOpen={showMembershipModal} onClose={() => setShowMembershipModal(false)} />
-      <PointsManagementModal isOpen={showPointsManagementModal} onClose={() => setShowPointsManagementModal(false)} />
+      <MembershipModal
+        isOpen={showMembershipModal}
+        onClose={() => setShowMembershipModal(false)}
+      />
+      <PointsManagementModal
+        isOpen={showPointsManagementModal}
+        onClose={() => setShowPointsManagementModal(false)}
+      />
     </div>
   );
 }
