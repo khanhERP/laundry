@@ -137,6 +137,8 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
       selectedFloor, // Include floor filter in query key
       orderStatusFilter, // Include status filter in query key
       storeFilter, // Include store filter in query key
+      storeSettings?.isAdmin, // Include admin status in query key
+      storeSettings?.parent, // Include parent stores in query key
     ],
     queryFn: async () => {
       try {
@@ -170,6 +172,8 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
           selectedFloor,
           orderStatusFilter,
           storeFilter,
+          isAdmin: storeSettings?.isAdmin,
+          parentStores: storeSettings?.parent,
           floorFilter,
           finalURL: `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range/${startDateTimeISO}/${endDateTimeISO}${floorFilter}`,
         });
@@ -204,6 +208,48 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
           });
         }
 
+        // Apply store filter logic based on admin status and selection
+        console.log("Sales Chart - Store filter logic:", {
+          storeFilter,
+          isAdmin: storeSettings?.isAdmin,
+          parentStores: storeSettings?.parent,
+        });
+
+        if (storeFilter === "all") {
+          // Case: "Tất cả" (All) selected
+          if (storeSettings?.isAdmin === true) {
+            // Case 1: isAdmin = true + "all" selected => Load ALL orders
+            console.log("Sales Chart - Admin 'All' filter: Loading all orders");
+            // No filtering needed - use all data
+          } else {
+            // Case 2: isAdmin = false + "all" selected => Load orders from parent stores only
+            const parentStores =
+              storeSettings?.parent?.split(",").map((s: string) => s.trim()) ||
+              [];
+            if (parentStores.length > 0) {
+              filteredData = filteredData.filter((order: any) =>
+                parentStores.includes(order.storeCode),
+              );
+              console.log("Sales Chart - Non-admin 'All' filter: Loading parent store orders only:", {
+                parentStores,
+                filteredCount: filteredData.length,
+              });
+            } else {
+              console.log("Sales Chart - Non-admin 'All' filter: No parent stores defined, returning empty");
+              filteredData = [];
+            }
+          }
+        } else {
+          // Case 3: Specific store selected => Load orders for that store only
+          filteredData = filteredData.filter(
+            (order: any) => order.storeCode === storeFilter,
+          );
+          console.log("Sales Chart - Specific store filter applied:", {
+            storeFilter,
+            filteredCount: filteredData.length,
+          });
+        }
+
         console.log("Sales Chart - Orders loaded with datetime:", {
           count: filteredData?.length || 0,
           totalCount: data?.length || 0,
@@ -211,12 +257,14 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
           endDateTimeISO,
           orderStatusFilter,
           storeFilter,
+          isAdmin: storeSettings?.isAdmin,
           sampleOrder: filteredData?.[0]
             ? {
                 id: filteredData[0].id,
                 orderNumber: filteredData[0].orderNumber,
                 orderedAt: filteredData[0].orderedAt,
                 status: filteredData[0].status,
+                storeCode: filteredData[0].storeCode,
               }
             : null,
         });
@@ -331,14 +379,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
   });
 
   const { data: customers } = useQuery({
-    queryKey: [
-      "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers",
-      customerSearch,
-      customerStatus,
-      startDate,
-      endDate,
-      storeFilter, // Include store filter in query key
-    ],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers", customerSearch, customerStatus],
     queryFn: async () => {
       const response = await fetch(
         `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers/${customerSearch || "all"}/${customerStatus}`,
@@ -5430,7 +5471,6 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
             )
             .slice(0, 10);
 
-          console.log("Generated chart data:", chart);
           return chartData;
 
         case "product":

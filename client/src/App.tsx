@@ -25,6 +25,10 @@ import PaymentMethodsPage from "@/pages/payment-methods";
 import CustomersPage from "./pages/customers";
 import { useQuery } from "@tanstack/react-query";
 import { Navigate } from "wouter/use-location"; // Assuming Navigate is available or similar functionality
+import { setupFetchInterceptor } from "./setupFetchInterceptor";
+
+// Setup fetch interceptor immediately
+setupFetchInterceptor();
 
 // Define StoreSettings interface if not already defined elsewhere
 interface StoreSettings {

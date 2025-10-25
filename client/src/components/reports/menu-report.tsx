@@ -112,17 +112,6 @@ function MenuReport() {
   // Fetch stores list for filter dropdown
   const { data: storesData = [] } = useQuery({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list"],
-    queryFn: async () => {
-      try {
-        const response = await apiRequest("GET", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list");
-        if (!response.ok) throw new Error("Failed to fetch stores");
-        const data = await response.json();
-        return Array.isArray(data) ? data : [];
-      } catch (error) {
-        console.error("Error fetching stores:", error);
-        return [];
-      }
-    },
     retry: 2,
   });
 
@@ -134,40 +123,12 @@ function MenuReport() {
   // Query categories
   const { data: categories = [] } = useQuery({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/categories"],
-    queryFn: async () => {
-      try {
-        const response = await apiRequest("GET", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/categories");
-        if (!response.ok) throw new Error("Failed to fetch categories");
-        const data = await response.json();
-        return Array.isArray(data) ? data : [];
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-        return [];
-      }
-    },
     retry: 2,
   });
 
   // Query products - filter by search term
   const { data: products = [] } = useQuery({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products", selectedCategory, productType, productSearch],
-    queryFn: async () => {
-      try {
-        const searchParam = productSearch
-          ? encodeURIComponent(productSearch)
-          : "";
-        const response = await apiRequest(
-          "GET",
-          `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products/${selectedCategory}/${productType}/${searchParam}`,
-        );
-        if (!response.ok) throw new Error("Failed to fetch products");
-        const data = await response.json();
-        return Array.isArray(data) ? data : [];
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        return [];
-      }
-    },
     retry: 2,
     enabled: true, // Always enabled to reload when productSearch changes
   });
@@ -187,8 +148,16 @@ function MenuReport() {
           endDate,
           ...(selectedCategory !== "all" && { categoryId: selectedCategory }),
           ...(productSearch && productSearch.trim() !== "" && { search: productSearch.trim() }),
-          ...(storeFilter !== "all" && { storeFilter: storeFilter }),
         });
+
+        // Handle store filter based on conditions:
+        // 1. If "all" selected -> pass "all" to server (server will handle admin vs non-admin logic)
+        // 2. If specific store selected -> pass exact storeCode
+        if (storeFilter === "all") {
+          params.append("storeFilter", "all");
+        } else if (storeFilter) {
+          params.append("storeFilter", storeFilter);
+        }
 
         const response = await apiRequest(
           "GET",
@@ -338,7 +307,7 @@ function MenuReport() {
                 className="h-10 w-full px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer"
               >
                 {storesData.filter((store: any) => store.typeUser !== 1).length > 1 && (
-                  <option value="all">{t("common.allStores")}</option>
+                  <option value="all">Tất cả</option>
                 )}
                 {storesData
                   .filter((store: any) => store.typeUser !== 1)

@@ -75,39 +75,49 @@ export function SalesReport() {
     retry: 2,
   });
 
-  // Query orders by date range
+  // Query orders by date range using /api/orders/list with proper store filtering
   const {
-    data: orders = [],
+    data: ordersResponse,
     isLoading: ordersLoading,
     error: ordersError,
     refetch: refetchOrders,
   } = useQuery({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range", startDate, endDate, "all", storeFilter],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/list", startDate, endDate, "all", storeFilter],
     queryFn: async () => {
       try {
-        const response = await fetch(
-          `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range/${startDate}/${endDate}/all`,
-        );
+        const params = new URLSearchParams({
+          startDate,
+          endDate,
+          status: "all",
+        });
+
+        // Handle store filter based on conditions:
+        // 1. If "all" selected -> pass "all" to server (server will handle admin vs non-admin logic)
+        // 2. If specific store selected -> pass exact storeCode
+        if (storeFilter === "all") {
+          params.append("storeFilter", "all");
+        } else if (storeFilter) {
+          params.append("storeFilter", storeFilter);
+        }
+
+        const response = await fetch(`https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/list?${params.toString()}`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-
-        // Filter by store if not "all"
-        let filteredData = Array.isArray(data) ? data : [];
-        if (storeFilter !== "all") {
-          filteredData = filteredData.filter((order: any) => order.storeCode === storeFilter);
-        }
-
-        return filteredData;
+        console.log("Sales Report - Orders loaded:", data?.orders?.length || 0);
+        return data;
       } catch (error) {
-        console.error("Error fetching orders:", error);
-        return [];
+        console.error("Sales Report - Error fetching orders:", error);
+        return { orders: [], pagination: {} };
       }
     },
     retry: 3,
     retryDelay: 1000,
   });
+
+  // Extract orders array from response
+  const orders = ordersResponse?.orders || [];
 
   // Query order items by date range
   const {
@@ -522,7 +532,6 @@ export function SalesReport() {
 
   const handleRefresh = () => {
     refetchOrders();
-    refetchOrderItems();
   };
 
   const salesData = getSalesData();

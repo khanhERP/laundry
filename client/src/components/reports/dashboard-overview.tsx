@@ -87,33 +87,49 @@ export function DashboardOverview() {
     },
   });
 
-  // Query orders by date range - using proper order data
+  // Query orders by date range - using proper order data with store filtering
   const {
-    data: orders = [],
+    data: ordersResponse,
     isLoading: ordersLoading,
     error: ordersError,
   } = useQuery({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range", startDate, endDate, "all", storeFilter],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/list", startDate, endDate, "all", storeFilter],
     queryFn: async () => {
       try {
-        const response = await fetch(
-          `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range/${startDate}/${endDate}/all`,
-        );
+        const params = new URLSearchParams({
+          startDate,
+          endDate,
+          status: "all",
+        });
+
+        // Handle store filter based on conditions:
+        // 1. If "all" selected -> pass "all" to server (server will handle admin vs non-admin logic)
+        // 2. If specific store selected -> pass exact storeCode
+        if (storeFilter === "all") {
+          params.append("storeFilter", "all");
+        } else if (storeFilter) {
+          params.append("storeFilter", storeFilter);
+        }
+
+        const response = await fetch(`https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/list?${params.toString()}`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        console.log("Dashboard - Orders loaded:", data?.length || 0);
-        return Array.isArray(data) ? data : [];
+        console.log("Dashboard - Orders loaded:", data?.orders?.length || 0);
+        return data;
       } catch (error) {
         console.error("Dashboard - Error fetching orders:", error);
-        return [];
+        return { orders: [], pagination: {} };
       }
     },
     retry: 3,
     retryDelay: 1000,
     staleTime: 5 * 60 * 1000,
   });
+
+  // Extract orders array from response
+  const orders = ordersResponse?.orders || [];
 
   // Query order items for all orders
   const { data: orderItems = [], isLoading: orderItemsLoading } = useQuery({
@@ -463,11 +479,13 @@ export function DashboardOverview() {
                 {storesData.filter((store: any) => store.typeUser !== 1).length > 1 && (
                   <option value="all">{t("reports.all")}</option>
                 )}
-                {storesData.map((store: any) => (
-                  <option key={store.id} value={store.storeCode}>
-                    {store.storeName}
-                  </option>
-                ))}
+                {storesData
+                  .filter((store: any) => store.typeUser !== 1)
+                  .map((store: any) => (
+                    <option key={store.id} value={store.storeCode}>
+                      {store.storeName}
+                    </option>
+                  ))}
               </select>
               <Label htmlFor="start-date-picker">
                 {t("reports.startDate")}:

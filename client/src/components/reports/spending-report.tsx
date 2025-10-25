@@ -48,22 +48,6 @@ export function SpendingReport() {
   // Fetch store settings list
   const { data: storesData = [] } = useQuery({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list"],
-    queryFn: async () => {
-      try {
-        const response = await fetch("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list", {
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        });
-        if (!response.ok) throw new Error("Failed to fetch stores");
-        const data = await response.json();
-        return Array.isArray(data) ? data : [];
-      } catch (error) {
-        console.error("Error fetching stores:", error);
-        return [];
-      }
-    },
     retry: 2,
   });
 

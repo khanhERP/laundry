@@ -118,30 +118,17 @@ export function PinAuth({ onAuthSuccess }: PinAuthProps) {
 
         console.log("✅ Login successful, token saved");
 
-        // CRITICAL: Clear ALL cache and force fresh data fetch
-        console.log("🔄 Clearing cache after login...");
-        queryClient.clear();
-        queryClient.removeQueries();
-
-        // Force refetch critical data with new token
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/auth/verify"] }),
-          queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings"] }),
-          queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders"] }),
-          queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/tables"] }),
-          queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products"] }),
-        ]);
-
-        console.log("✅ Cache cleared, ready to navigate");
-
-        // Small delay to ensure cache is cleared
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Redirect to reports page
-        setLocation("/reports");
-        
         // Call onAuthSuccess to update app state
         onAuthSuccess();
+
+        // CRITICAL: Reload page to ensure fresh start with new token
+        console.log("🔄 Reloading page after successful login...");
+        
+        // Small delay to ensure token is saved
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Reload the page - this will clear all cache and fetch fresh data
+        window.location.reload();
       } else {
         toast({
           title: "Đăng nhập thất bại",

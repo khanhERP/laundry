@@ -11,59 +11,41 @@ async function throwIfResNotOk(res: Response) {
 export async function apiRequest(
   method: string,
   url: string,
-  data?: any,
-  options?: RequestInit,
+  body?: any,
 ): Promise<Response> {
-  // Get auth token from localStorage as fallback
-  const token = localStorage.getItem("authToken");
+  const headers = new Headers();
 
-  const config: RequestInit = {
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  // Always include auth token if available
+  const token = localStorage.getItem("authToken");
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+    console.log("✅ Auth token included in request to:", url);
+  } else {
+    console.warn("⚠️ No auth token available for request to:", url);
+  }
+
+  const options: RequestInit = {
     method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options?.headers,
-    },
-    ...options,
+    headers,
+    credentials: "include", // Always send cookies
   };
 
-  if (data) {
-    config.body = JSON.stringify(data);
-
-    // Additional logging for payment method requests
-    if (
-      url.includes("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/") &&
-      url.includes("/status") &&
-      method === "PUT"
-    ) {
-      console.log("🔍 apiRequest: Final request body for payment:", {
-        url,
-        requestBodyString: JSON.stringify(data),
-        parsedBack: JSON.parse(JSON.stringify(data)),
-        timestamp: new Date().toISOString(),
-      });
-    }
+  if (body && (method === "POST" || method === "PUT" || method === "PATCH")) {
+    options.body = JSON.stringify(body);
   }
 
-  const response = await fetch(url, config);
+  const response = await fetch(url, options);
 
-  // Check for token refresh in response header
-  const newToken = response.headers.get("X-New-Token");
-  if (newToken) {
-    localStorage.setItem("authToken", newToken);
-    console.log("🔄 Token automatically refreshed");
-  }
-
-  // Handle 401 Unauthorized - token expired or invalid
+  // Handle token expiration
   if (response.status === 401) {
+    console.warn("⚠️ Token expired or invalid, redirecting to login...");
     localStorage.removeItem("authToken");
     localStorage.removeItem("userData");
     window.location.href = "/";
-    throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
-  }
-
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
   }
 
   return response;
@@ -88,13 +70,11 @@ export const getQueryFn: <T>(options: {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: defaultFetcher, // 👈 set mặc định ở đây
-      // queryFn: getQueryFn({ on401: "throw" }),
+      queryFn: defaultFetcher,
       refetchInterval: false,
       refetchOnWindowFocus: true,
       staleTime: 0, // No cache - always fetch fresh
       gcTime: 0, // Don't keep in memory
-      cacheTime: 0, // Disable cache completely
       retry: 1,
       refetchOnMount: true,
       refetchOnReconnect: true,

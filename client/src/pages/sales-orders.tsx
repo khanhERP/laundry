@@ -340,19 +340,6 @@ export default function SalesOrders() {
   // Query customers for datalist
   const { data: customers = [] } = useQuery({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers"],
-    queryFn: async () => {
-      try {
-        const response = await apiRequest("GET", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers");
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        return Array.isArray(data) ? data : [];
-      } catch (error) {
-        console.error("Error fetching customers:", error);
-        return [];
-      }
-    },
     staleTime: 0,
     gcTime: 0,
   });
@@ -360,24 +347,19 @@ export default function SalesOrders() {
   // Query store list for filter
   const { data: storesData = [] } = useQuery({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list"],
-    queryFn: async () => {
-      try {
-        const response = await apiRequest("GET", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list");
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        let data = await response.json();
-        // Filter out admin accounts (userType = 1)
-        // data = data.filter((store: any) => store.typeUser !== 1); // This filtering is now done inline in the select component
-        return Array.isArray(data) ? data : [];
-      } catch (error) {
-        console.error("Error fetching stores:", error);
-        return [];
-      }
-    },
     staleTime: 0,
     gcTime: 0,
   });
+
+  // Auto-select first store if storeCodeFilter is "all" and there's only one store
+  useEffect(() => {
+    if (storesData && storesData.length > 0) {
+      const filteredStores = storesData.filter((store: any) => store.typeUser !== 1);
+      if (filteredStores.length === 1 && storeCodeFilter === "all") {
+        setStoreCodeFilter(filteredStores[0].storeCode);
+      }
+    }
+  }, [storesData]);
 
   // Query orders using /api/orders/list with storeCode filter
   const {
@@ -418,7 +400,7 @@ export default function SalesOrders() {
         if (einvoiceStatusFilter && einvoiceStatusFilter !== "all") {
           params.append("einvoiceStatus", einvoiceStatusFilter);
         }
-        
+
         // Handle store filter based on conditions:
         // 1. If admin and "all" selected -> load all stores (storeFilter = "all")
         // 2. If non-admin and "all" selected -> load stores from parent field (storeFilter = "all", server will filter by parent)
@@ -431,7 +413,7 @@ export default function SalesOrders() {
           // Specific store selected - load exact data for that storeCode
           params.append("storeFilter", storeCodeFilter);
         }
-        
+
         params.append("page", currentPage.toString());
         if (itemsPerPage) {
           params.append("limit", itemsPerPage.toString());
@@ -472,19 +454,6 @@ export default function SalesOrders() {
   // Query all products to get tax rates
   const { data: products = [] } = useQuery({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products"],
-    queryFn: async () => {
-      try {
-        const response = await apiRequest("GET", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products");
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        return Array.isArray(data) ? data : [];
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        return [];
-      }
-    },
     staleTime: 0,
     gcTime: 0,
   });
@@ -500,19 +469,6 @@ export default function SalesOrders() {
   // Query tables to map tableId to table number
   const { data: tables = [] } = useQuery({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/tables"],
-    queryFn: async () => {
-      try {
-        const response = await apiRequest("GET", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/tables");
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        return Array.isArray(data) ? data : [];
-      } catch (error) {
-        console.error("Error fetching tables:", error);
-        return [];
-      }
-    },
     staleTime: 0,
     gcTime: 0,
   });
@@ -2346,7 +2302,9 @@ export default function SalesOrders() {
               : item.unitPrice || "0",
           );
           const quantity = parseFloat(
-            editedItem.quantity !== undefined ? editedItem.quantity : item.quantity || "0",
+            editedItem.quantity !== undefined
+              ? editedItem.quantity
+              : item.quantity || "0",
           );
           calculatedSubtotal += unitPrice * quantity;
         } else {
@@ -2362,7 +2320,9 @@ export default function SalesOrders() {
               : item.unitPrice || "0",
           );
           const quantity = parseFloat(
-            editedItem.quantity !== undefined ? editedItem.quantity : item.quantity || "0",
+            editedItem.quantity !== undefined
+              ? editedItem.quantity
+              : item.quantity || "0",
           );
 
           const itemSubtotal = unitPrice * quantity;
@@ -3030,7 +2990,8 @@ export default function SalesOrders() {
                     onChange={(e) => setStoreCodeFilter(e.target.value)}
                     className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
-                    {storesData.filter((store: any) => store.typeUser !== 1).length > 1 && (
+                    {storesData.filter((store: any) => store.typeUser !== 1)
+                      .length > 1 && (
                       <option value="all">{t("common.allStores")}</option>
                     )}
                     {storesData
@@ -4441,7 +4402,8 @@ export default function SalesOrders() {
                                                                               editedOrderItems[
                                                                                 it
                                                                                   .id
-                                                                              ] || {};
+                                                                              ] ||
+                                                                              {};
                                                                             const itPrice =
                                                                               parseFloat(
                                                                                 editedIt.unitPrice !==
@@ -5426,24 +5388,22 @@ export default function SalesOrders() {
                                                   <>
                                                     {/* Nút Hủy đơn: hiển thị khi order.status != 'cancelled' && order.status != 'paid' */}
                                                     {selectedInvoice.status !==
-                                                      "cancelled" &&
-                                                      selectedInvoice.status !==
-                                                        "paid" && (
-                                                        <Button
-                                                          variant="destructive"
-                                                          size="sm"
-                                                          onClick={() =>
-                                                            setShowCancelDialog(
-                                                              true,
-                                                            )
-                                                          }
-                                                        >
-                                                          <X className="w-4 h-4 mr-2" />
-                                                          {t(
-                                                            "common.cancelOrder",
-                                                          )}
-                                                        </Button>
-                                                      )}
+                                                      "cancelled" && (
+                                                      <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                          setShowCancelDialog(
+                                                            true,
+                                                          )
+                                                        }
+                                                      >
+                                                        <X className="w-4 h-4 mr-2" />
+                                                        {t(
+                                                          "common.cancelOrder",
+                                                        )}
+                                                      </Button>
+                                                    )}
 
                                                     {/* Nút Sửa đơn: logic phức tạp dựa vào businessType và isPaid */}
                                                     {(() => {
@@ -5644,9 +5604,9 @@ export default function SalesOrders() {
                                                         </Button>
                                                       )}
 
-                                                    {/* Nút In hóa đơn: hiển thị khi order.status != 'paid' */}
-                                                    {selectedInvoice.status ===
-                                                      "paid" && (
+                                                    {/* Nút In hóa đơn: hiển thị khi order.status != 'cancelled' */}
+                                                    {selectedInvoice.status !==
+                                                      "cancelled" && (
                                                       <Button
                                                         size="sm"
                                                         variant="outline"

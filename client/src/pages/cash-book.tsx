@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "@/lib/i18n";
 import * as XLSX from "xlsx";
@@ -180,6 +180,16 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
       }
     },
   });
+
+  // Auto-select first store if storeFilter is "all" and there's only one store
+  useEffect(() => {
+    if (storesData && storesData.length > 0) {
+      const filteredStores = storesData.filter((store: any) => store.typeUser !== 1);
+      if (filteredStores.length === 1 && storeFilter === "all") {
+        setStoreFilter(filteredStores[0].storeCode);
+      }
+    }
+  }, [storesData]);
 
   // Load payment methods from localStorage (same as settings page)
   // Query payment methods from API

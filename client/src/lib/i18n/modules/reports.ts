@@ -1530,16 +1530,8 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
     productSearch: "Product Search",
 
     // Additional missing keys
-    floor: {
-      en: "Floor",
-      vi: "Tầng",
-      ko: "층",
-    },
-    store: {
-      en: "Store",
-      vi: "Cửa hàng",
-      ko: "매장",
-    },
+    floor: "Floor",
+    store: "Store",
     period: "Period",
     noDataDescription: "No data to display",
     monthAccumulated: "Month Accumulated",
