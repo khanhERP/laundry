@@ -97,6 +97,13 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
   const [productCurrentPage, setProductCurrentPage] = useState(1);
   const [productPageSize, setProductPageSize] = useState(15);
 
+  // Refetch orders when analysisType or storeFilter changes
+  useEffect(() => {
+    if (refetchOrders) {
+      refetchOrders();
+    }
+  }, [analysisType, storeFilter]);
+
   // Customer Report with Pagination State
   const [customerCurrentPage, setCustomerCurrentPage] = useState(1);
   const [customerPageSize, setCustomerPageSize] = useState(15);
@@ -127,6 +134,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
     data: orders = [],
     isLoading: ordersLoading,
     error: ordersError,
+    refetch: refetchOrders,
   } = useQuery({
     queryKey: [
       "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range",
@@ -158,6 +166,17 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
         const floorFilter =
           selectedFloor !== "all" ? `/${selectedFloor}` : "/all";
 
+        // Add storeFilter query parameter
+        const params = new URLSearchParams();
+        if (storeFilter && storeFilter !== "all") {
+          params.append("storeFilter", storeFilter);
+        } else if (storeFilter === "all") {
+          params.append("storeFilter", "all");
+        }
+
+        const queryString = params.toString();
+        const url = `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range/${startDateTimeISO}/${endDateTimeISO}${floorFilter}${queryString ? `?${queryString}` : ""}`;
+
         console.log("Sales Chart - Fetching orders with date range:", {
           startDate,
           endDate,
@@ -175,12 +194,10 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
           isAdmin: storeSettings?.isAdmin,
           parentStores: storeSettings?.parent,
           floorFilter,
-          finalURL: `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range/${startDateTimeISO}/${endDateTimeISO}${floorFilter}`,
+          finalURL: url,
         });
 
-        const response = await fetch(
-          `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range/${startDateTimeISO}/${endDateTimeISO}${floorFilter}`,
-        );
+        const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -213,6 +230,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
           storeFilter,
           isAdmin: storeSettings?.isAdmin,
           parentStores: storeSettings?.parent,
+          beforeFilterCount: filteredData.length,
         });
 
         if (storeFilter === "all") {
@@ -239,14 +257,16 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
               filteredData = [];
             }
           }
-        } else {
+        } else if (storeFilter && storeFilter !== "all") {
           // Case 3: Specific store selected => Load orders for that store only
           filteredData = filteredData.filter(
             (order: any) => order.storeCode === storeFilter,
           );
           console.log("Sales Chart - Specific store filter applied:", {
             storeFilter,
-            filteredCount: filteredData.length,
+            beforeCount: data?.length || 0,
+            afterCount: filteredData.length,
+            sampleStoreCode: filteredData[0]?.storeCode,
           });
         }
 
@@ -258,6 +278,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
           orderStatusFilter,
           storeFilter,
           isAdmin: storeSettings?.isAdmin,
+          afterServerFilter: true,
           sampleOrder: filteredData?.[0]
             ? {
                 id: filteredData[0].id,
@@ -276,7 +297,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
     },
     retry: 2,
     retryDelay: 500,
-    staleTime: 1 * 60 * 1000, // Cache for 1 minute only to ensure fresh data
+    staleTime: 0, // Disable cache to ensure fresh data on filter change
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
     refetchOnWindowFocus: false,
   });
@@ -363,7 +384,8 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
       if (!response.ok) throw new Error("Failed to fetch products");
       return response.json();
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0, // Disable cache to ensure fresh data
+    enabled: analysisType === "product", // Only fetch when needed
   });
 
   const { data: categories } = useQuery({

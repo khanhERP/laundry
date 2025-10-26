@@ -369,18 +369,31 @@ export function PriceListManagement() {
       if (!response.ok) throw new Error("Failed to update price");
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items"] });
-      toast({
-        title: "Thành công",
-        description: "Cập nhật giá thành công",
-      });
+    onSuccess: (_, variables) => {
+      // Không invalidate query ngay để tránh reset input
+      // Chỉ update cache một cách optimistic
+      queryClient.setQueryData(
+        ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
+        (old: any) => {
+          if (!old) return old;
+          return old.map((item: any) =>
+            item.priceListId === variables.priceListId &&
+            item.productId === variables.productId
+              ? { ...item, price: variables.price }
+              : item
+          );
+        }
+      );
     },
     onError: (error: Error) => {
       toast({
         title: "Lỗi",
         description: error.message,
         variant: "destructive",
+      });
+      // Chỉ refetch khi có lỗi để restore giá trị đúng
+      queryClient.invalidateQueries({
+        queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
       });
     },
   });
@@ -613,14 +626,7 @@ export function PriceListManagement() {
   ) => {
     const key = `${priceListId}-${productId}`;
 
-    // Remove from editing state
-    setEditingPrices((prev) => {
-      const newState = { ...prev };
-      delete newState[key];
-      return newState;
-    });
-
-    // Only save if there's a valid price
+    // Only save if there's a valid price and it's different from current
     if (newPrice && newPrice.trim() !== "") {
       updatePriceMutation.mutate({
         priceListId,
@@ -628,6 +634,13 @@ export function PriceListManagement() {
         price: newPrice,
       });
     }
+
+    // Remove from editing state after saving
+    setEditingPrices((prev) => {
+      const newState = { ...prev };
+      delete newState[key];
+      return newState;
+    });
   };
 
   // Add products to price list mutation
@@ -669,14 +682,10 @@ export function PriceListManagement() {
       }
     },
     onSuccess: async () => {
-      // Invalidate and refetch price list items with selected price lists
-      await queryClient.invalidateQueries({
+      // Chỉ invalidate một lần, không refetch ngay
+      queryClient.invalidateQueries({
         queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
       });
-      await queryClient.refetchQueries({
-        queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
-      });
-      await queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists"] });
 
       setShowProductSelector(false);
       setSelectedProducts([]);
@@ -1031,6 +1040,22 @@ export function PriceListManagement() {
                       e.stopPropagation();
                       handleEdit(priceList);
                     }}
+                    disabled={
+                      !isAdmin &&
+                      priceList.storeCode &&
+                      priceList.storeCode
+                        .split(",")
+                        .filter((s: string) => s.trim()).length > 1
+                    }
+                    title={
+                      !isAdmin &&
+                      priceList.storeCode &&
+                      priceList.storeCode
+                        .split(",")
+                        .filter((s: string) => s.trim()).length > 1
+                        ? "Chỉ admin mới có quyền sửa bảng giá áp dụng nhiều cửa hàng"
+                        : "Sửa bảng giá"
+                    }
                     className="h-8 w-8 p-0"
                   >
                     <svg
@@ -1073,7 +1098,7 @@ export function PriceListManagement() {
                               .split(",")
                               .filter((s: string) => s.trim()).length > 1
                           ? "Chỉ admin mới có quyền xóa bảng giá áp dụng nhiều cửa hàng"
-                          : ""
+                          : "Xóa bảng giá"
                     }
                     className="h-8 w-8 p-0"
                   >
@@ -1090,6 +1115,25 @@ export function PriceListManagement() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Card className="flex-1 flex flex-col">
           <CardContent className="p-4 flex-1 flex flex-col overflow-hidden">
+            {/* Read-only warning for non-admin users */}
+            {!isAdmin &&
+              selectedPriceLists.length > 0 &&
+              selectedPriceLists.some((plId) => {
+                const pl = priceLists.find((p: PriceList) => p.id === plId);
+                return (
+                  pl?.storeCode &&
+                  pl.storeCode.split(",").filter((s: string) => s.trim())
+                    .length > 1
+                );
+              }) && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    <strong>Chế độ chỉ xem:</strong> Bảng giá này áp dụng cho
+                    nhiều cửa hàng. Chỉ Admin mới có quyền chỉnh sửa.
+                  </p>
+                </div>
+              )}
+
             {/* Filters */}
             <div className="flex items-center gap-4 mb-4">
               <div className="relative flex-1">
@@ -1124,7 +1168,34 @@ export function PriceListManagement() {
               </Select>
               <Button
                 onClick={() => setShowProductSelector(true)}
-                disabled={selectedPriceLists.length === 0}
+                disabled={
+                  selectedPriceLists.length === 0 ||
+                  (!isAdmin &&
+                    selectedPriceLists.some((plId) => {
+                      const pl = priceLists.find(
+                        (p: PriceList) => p.id === plId,
+                      );
+                      return (
+                        pl?.storeCode &&
+                        pl.storeCode
+                          .split(",")
+                          .filter((s: string) => s.trim()).length > 1
+                      );
+                    }))
+                }
+                title={
+                  !isAdmin &&
+                  selectedPriceLists.some((plId) => {
+                    const pl = priceLists.find((p: PriceList) => p.id === plId);
+                    return (
+                      pl?.storeCode &&
+                      pl.storeCode.split(",").filter((s: string) => s.trim())
+                        .length > 1
+                    );
+                  })
+                    ? "Chỉ admin mới có quyền thêm sản phẩm vào bảng giá nhiều chi nhánh"
+                    : ""
+                }
                 className="whitespace-nowrap"
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -1144,7 +1215,34 @@ export function PriceListManagement() {
               </Button>
               <Button
                 onClick={() => setShowImportDialog(true)}
-                disabled={selectedPriceLists.length === 0}
+                disabled={
+                  selectedPriceLists.length === 0 ||
+                  (!isAdmin &&
+                    selectedPriceLists.some((plId) => {
+                      const pl = priceLists.find(
+                        (p: PriceList) => p.id === plId,
+                      );
+                      return (
+                        pl?.storeCode &&
+                        pl.storeCode
+                          .split(",")
+                          .filter((s: string) => s.trim()).length > 1
+                      );
+                    }))
+                }
+                title={
+                  !isAdmin &&
+                  selectedPriceLists.some((plId) => {
+                    const pl = priceLists.find((p: PriceList) => p.id === plId);
+                    return (
+                      pl?.storeCode &&
+                      pl.storeCode.split(",").filter((s: string) => s.trim())
+                        .length > 1
+                    );
+                  })
+                    ? "Chỉ admin mới có quyền import giá cho bảng giá nhiều chi nhánh"
+                    : ""
+                }
                 variant="outline"
                 className="whitespace-nowrap"
               >
@@ -1381,7 +1479,36 @@ export function PriceListManagement() {
                             }}
                             className="h-8 w-8 p-0 hover:bg-red-50"
                             disabled={
-                              deleteProductFromPriceListMutation.isPending
+                              deleteProductFromPriceListMutation.isPending ||
+                              (!isAdmin &&
+                                selectedPriceLists.some((plId) => {
+                                  const pl = priceLists.find(
+                                    (p: PriceList) => p.id === plId,
+                                  );
+                                  return (
+                                    pl?.storeCode &&
+                                    pl.storeCode
+                                      .split(",")
+                                      .filter((s: string) => s.trim()).length >
+                                      1
+                                  );
+                                }))
+                            }
+                            title={
+                              !isAdmin &&
+                              selectedPriceLists.some((plId) => {
+                                const pl = priceLists.find(
+                                  (p: PriceList) => p.id === plId,
+                                );
+                                return (
+                                  pl?.storeCode &&
+                                  pl.storeCode
+                                    .split(",")
+                                    .filter((s: string) => s.trim()).length > 1
+                                );
+                              })
+                                ? "Chỉ admin mới có quyền xóa sản phẩm khỏi bảng giá nhiều chi nhánh"
+                                : ""
                             }
                           >
                             <Trash2 className="w-4 h-4 text-red-500" />
