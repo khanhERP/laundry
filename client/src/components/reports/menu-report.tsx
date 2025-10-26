@@ -498,8 +498,10 @@ function MenuReport() {
                             data={menuAnalysis.categoryStats.map(
                               (cat, index) => ({
                                 name:
-                                  cat.categoryName ||
-                                  `Danh mục ${cat.categoryId}`,
+                                  cat.categoryName && cat.categoryName.length > 20
+                                    ? cat.categoryName.substring(0, 20) + "..."
+                                    : cat.categoryName || `Danh mục ${cat.categoryId}`,
+                                fullName: cat.categoryName || `Danh mục ${cat.categoryId}`,
                                 value: Number(cat.totalRevenue || 0),
                                 fill: `hsl(${(index * 137.508) % 360}, 70%, 60%)`,
                               }),
@@ -510,6 +512,7 @@ function MenuReport() {
                             outerRadius={80}
                             paddingAngle={2}
                             dataKey="value"
+                            label={false}
                           >
                             {menuAnalysis.categoryStats.map((entry, index) => (
                               <Cell
@@ -519,9 +522,9 @@ function MenuReport() {
                             ))}
                           </Pie>
                           <Tooltip
-                            formatter={(value) => [
+                            formatter={(value, name, props) => [
                               formatCurrency(Number(value)) + " ₫",
-                              "Doanh thu",
+                              props.payload.fullName || "Doanh thu",
                             ]}
                             contentStyle={{
                               backgroundColor: "white",
@@ -532,8 +535,9 @@ function MenuReport() {
                           />
                           <Legend
                             verticalAlign="bottom"
-                            height={36}
-                            wrapperStyle={{ fontSize: "12px" }}
+                            height={60}
+                            wrapperStyle={{ fontSize: "11px", lineHeight: "1.2" }}
+                            iconSize={10}
                           />
                         </PieChart>
                       </ResponsiveContainer>
@@ -559,8 +563,10 @@ function MenuReport() {
                                 ? menuAnalysis.categoryStats.map(
                                     (cat, index) => ({
                                       name:
-                                        cat.categoryName ||
-                                        `Danh mục ${cat.categoryId}`,
+                                        cat.categoryName && cat.categoryName.length > 20
+                                          ? cat.categoryName.substring(0, 20) + "..."
+                                          : cat.categoryName || `Danh mục ${cat.categoryId}`,
+                                      fullName: cat.categoryName || `Danh mục ${cat.categoryId}`,
                                       value: Number(cat.totalQuantity || 0),
                                       fill: `hsl(${(index * 137.508 + 180) % 360}, 70%, 60%)`,
                                     }),
@@ -568,6 +574,7 @@ function MenuReport() {
                                 : [
                                     {
                                       name: "Không có dữ liệu",
+                                      fullName: "Không có dữ liệu",
                                       value: 1,
                                       fill: "#e0e0e0",
                                     },
@@ -579,16 +586,28 @@ function MenuReport() {
                             outerRadius={80}
                             paddingAngle={2}
                             dataKey="value"
+                            label={false}
                           >
                             <Cell />
                           </Pie>
                           <Tooltip
-                            formatter={(value, name) => [
+                            formatter={(value, name, props) => [
                               `${Number(value).toLocaleString()}`,
-                              name,
+                              props.payload.fullName || name,
                             ]}
+                            contentStyle={{
+                              backgroundColor: "white",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: "8px",
+                              fontSize: "12px",
+                            }}
                           />
-                          <Legend />
+                          <Legend
+                            verticalAlign="bottom"
+                            height={60}
+                            wrapperStyle={{ fontSize: "11px", lineHeight: "1.2" }}
+                            iconSize={10}
+                          />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>

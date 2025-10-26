@@ -251,7 +251,7 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
     direct: "Trực tiếp",
     other: "Khác",
     returnValue: "Giá trị trả hàng",
-    netRevenue: "Doanh thu ròng",
+    netRevenue: "Doanh thu",
     totalCost: "Tổng chi phí",
     grossProfit: "Lợi nhuận gộp",
     totalInvoices: "Tổng hóa đơn",
@@ -557,12 +557,14 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
     priceInfo: "Thông tin giá",
     additionalInfo: "Thông tin khác",
     noDataInDateRange: "Không có dữ liệu trong khoảng thời gian đã chọn",
-    tryDifferentDateRange: "Thử chọn khoảng thời gian khác hoặc kiểm tra dữ liệu đơn hàng và hóa đơn",
+    tryDifferentDateRange:
+      "Thử chọn khoảng thời gian khác hoặc kiểm tra dữ liệu đơn hàng và hóa đơn",
 
     // Spending Report (Đã chi và dự chi)
     spendingReport: "Đã chi và dự chi",
     spendingReportTitle: "Báo cáo đã chi và dự chi",
-    spendingReportDescription: "Báo cáo chi tiết về chi phí đã phát sinh và dự kiến",
+    spendingReportDescription:
+      "Báo cáo chi tiết về chi phí đã phát sinh và dự kiến",
     dashboardTab: "Bảng điều khiển",
     salesAnalysisTab: "Phân tích bán hàng",
     menuAnalysisTab: "Phân tích menu",
@@ -1130,7 +1132,8 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
     priceInfo: "가격 정보",
     additionalInfo: "추가 정보",
     noDataInDateRange: "선택한 기간에 데이터가 없습니다",
-    tryDifferentDateRange: "다른 기간을 선택하거나 주문 및 송장 데이터를 확인하십시오",
+    tryDifferentDateRange:
+      "다른 기간을 선택하거나 주문 및 송장 데이터를 확인하십시오",
 
     // Spending Report (지출 및 예상 지출)
     spendingReport: "지출 및 예상 지출",
@@ -1713,12 +1716,14 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
     priceInfo: "Price Information",
     additionalInfo: "Additional Information",
     noDataInDateRange: "No data in the selected date range",
-    tryDifferentDateRange: "Try selecting a different date range or check order and invoice data",
+    tryDifferentDateRange:
+      "Try selecting a different date range or check order and invoice data",
 
     // Spending Report
     spendingReport: "Spending Report",
     spendingReportTitle: "Spending and Projected Spending Report",
-    spendingReportDescription: "Detailed report on incurred and projected expenses",
+    spendingReportDescription:
+      "Detailed report on incurred and projected expenses",
     dashboardTab: "Dashboard",
     salesAnalysisTab: "Sales Analysis",
     menuAnalysisTab: "Menu Analysis",
