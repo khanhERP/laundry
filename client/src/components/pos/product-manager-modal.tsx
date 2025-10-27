@@ -69,11 +69,11 @@ export function ProductManagerModal({
     categoryId: z.number().min(1, t("tables.categoryRequired")),
     price: z
       .string()
-      .min(1, "Price is required")
       .refine((val) => {
         const num = parseFloat(val.replace(/\./g, ""));
-        return !isNaN(num) && num > 0 && num < 100000000; // Max 99,999,999 (8 digits)
-      }, "Price must be a valid positive number and less than 100,000,000"),
+        return !isNaN(num) && num >= 0 && num < 100000000;
+      }, "Price must be a valid non-negative number and less than 100,000,000")
+      .default("0"),
     sku: z.string().optional(),
     name: z.string().min(1, t("tables.productNameRequired")),
     productType: z.number().min(1, t("tables.productTypeRequired")),
@@ -88,8 +88,8 @@ export function ProductManagerModal({
         if (!val || val === undefined) return true; // Optional field
         const numVal =
           typeof val === "string" ? parseFloat(val.replace(/\./g, "")) : val;
-        return !isNaN(numVal) && numVal > 0 && numVal < 100000000;
-      }, "After tax price must be a valid positive number and less than 100,000,000"),
+        return !isNaN(numVal) && numVal >= 0 && numVal < 100000000; // Allowing 0
+      }, "After tax price must be a valid non-negative number and less than 100,000,000"),
     floor: z.string().optional(),
     zone: z.string().optional(),
   });
@@ -164,19 +164,20 @@ export function ProductManagerModal({
     onSuccess: (newProduct) => {
       queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products"] });
       queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products/active"] });
-      
+
       toast({
         title: "✅ Tạo sản phẩm thành công",
         description: `Sản phẩm "${newProduct.name}" đã được thêm vào hệ thống`,
         duration: 3000,
       });
-      
-      // Small delay to show toast before closing form
+
+      // Close modal completely after success
       setTimeout(() => {
         setShowAddForm(false);
         resetForm();
         setSelectedImageFile(null);
         setImageInputMethod("url");
+        onClose(); // Close the entire modal
       }, 500);
     },
     onError: (error: Error) => {
@@ -233,15 +234,15 @@ export function ProductManagerModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(finalData),
       });
-      
+
       console.log("🔄 UPDATE MUTATION - Response status:", response.status);
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
         console.error("🔄 UPDATE MUTATION - Error:", errorData);
         throw new Error(errorData.message || "Failed to update product");
       }
-      
+
       const result = await response.json();
       console.log("🔄 UPDATE MUTATION - Success result:", result);
       return result;
@@ -249,13 +250,13 @@ export function ProductManagerModal({
     onSuccess: (updatedProduct) => {
       queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products"] });
       queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products/active"] });
-      
+
       toast({
         title: "✅ Cập nhật thành công",
         description: `Sản phẩm "${updatedProduct.name}" đã được cập nhật`,
         duration: 3000,
       });
-      
+
       // Small delay to show toast before closing modal
       setTimeout(() => {
         setEditingProduct(null);
@@ -306,7 +307,7 @@ export function ProductManagerModal({
     defaultValues: {
       name: "",
       sku: "",
-      price: "",
+      price: "0", // Default price set to "0"
       stock: 0,
       categoryId: 0,
       productType: 1,
@@ -386,7 +387,7 @@ export function ProductManagerModal({
     const cleanPrice = data.price.replace(/[^0-9]/g, ""); // Remove all non-numeric characters
     const priceNum = parseInt(cleanPrice);
 
-    if (!cleanPrice || isNaN(priceNum) || priceNum <= 0) {
+    if (isNaN(priceNum) || priceNum < 0) {
       toast({
         title: "Error",
         description: "Please enter a valid price",
@@ -452,7 +453,7 @@ export function ProductManagerModal({
       zone: String(data.zone || "A"), // Add zone field to ensure it's saved
       unit: data.unit || "Cái", // Unit field - ensure it's saved
     };
-    
+
     console.log("📦 Transformed data with unit:", {
       productName: transformedData.name,
       unit: transformedData.unit,
@@ -601,7 +602,7 @@ export function ProductManagerModal({
     form.reset({
       name: "",
       sku: "",
-      price: "",
+      price: "0", // Default price set to "0"
       stock: 0,
       categoryId: categories.length > 0 ? categories[0].id : 0,
       productType: 1,
@@ -712,7 +713,7 @@ export function ProductManagerModal({
       if (initialSearchSKU) {
         setSearchTerm(initialSearchSKU);
       }
-      
+
       // If product prop is provided (editing mode), open form with product data
       if (product) {
         handleEdit(product);
@@ -724,7 +725,7 @@ export function ProductManagerModal({
         form.reset({
           name: "",
           sku: "",
-          price: "",
+          price: "0", // Default price set to "0"
           stock: 0,
           categoryId: 0,
           productType: 1,
@@ -778,7 +779,7 @@ export function ProductManagerModal({
     form.reset({
       name: "",
       sku: "",
-      price: "",
+      price: "0", // Default price set to "0"
       stock: 0,
       categoryId: 0,
       productType: 1,
@@ -1576,6 +1577,13 @@ export function ProductManagerModal({
                     />
                   </div>
 
+                  {/* Debug: Show productUnits data */}
+                  {productUnits.length > 0 && (
+                    <div className="text-xs text-gray-500">
+                      ✅ Đã tải {productUnits.length} đơn vị từ API
+                    </div>
+                  )}
+
                   <div className="flex justify-end space-x-2">
                     <Button
                       type="button"
@@ -1602,7 +1610,7 @@ export function ProductManagerModal({
                         console.log("Form values:", form.getValues());
                         console.log("Form errors:", form.formState.errors);
                         console.log("Is form valid?", form.formState.isValid);
-                        
+
                         // Log detailed errors
                         const errors = form.formState.errors;
                         if (Object.keys(errors).length > 0) {

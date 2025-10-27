@@ -1,5 +1,11 @@
-
-import { useState, useEffect, useMemo, Component, ErrorInfo, ReactNode } from "react";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  Component,
+  ErrorInfo,
+  ReactNode,
+} from "react";
 import { POSHeader } from "@/components/pos/header";
 import { RightSidebar } from "@/components/ui/right-sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,6 +40,7 @@ import {
   Printer,
   CreditCard,
   Tag,
+  Search,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -103,6 +110,15 @@ class ErrorBoundary extends Component<
   }
 }
 
+// Helper function to format date for display
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
 
 export default function ReportsPage({ onLogout }: ReportsPageProps) {
   const { t } = useTranslation();
@@ -627,90 +643,300 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                     </CardTitle>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm">
-                      <BarChart3 className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      <PieChart className="w-4 h-4" />
-                    </Button>
-                    <Select defaultValue="today">
-                      <SelectTrigger className="w-32">
+                    <Select
+                      value={
+                        startDate === endDate && startDate === todayStr
+                          ? "today"
+                          : startDate === endDate
+                            ? "custom"
+                            : (() => {
+                                const today = new Date();
+                                const start = new Date(startDate);
+                                const end = new Date(endDate);
+
+                                // Check if it's this week
+                                const startOfWeek = new Date(today);
+                                startOfWeek.setDate(
+                                  today.getDate() - today.getDay(),
+                                );
+                                const endOfWeek = new Date(startOfWeek);
+                                endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+                                if (
+                                  start.toDateString() ===
+                                    startOfWeek.toDateString() &&
+                                  end.toDateString() ===
+                                    endOfWeek.toDateString()
+                                ) {
+                                  return "thisWeek";
+                                }
+
+                                // Check if it's last week
+                                const startOfLastWeek = new Date(startOfWeek);
+                                startOfLastWeek.setDate(
+                                  startOfWeek.getDate() - 7,
+                                );
+                                const endOfLastWeek = new Date(startOfLastWeek);
+                                endOfLastWeek.setDate(
+                                  startOfLastWeek.getDate() + 6,
+                                );
+
+                                if (
+                                  start.toDateString() ===
+                                    startOfLastWeek.toDateString() &&
+                                  end.toDateString() ===
+                                    endOfLastWeek.toDateString()
+                                ) {
+                                  return "lastWeek";
+                                }
+
+                                // Check if it's this month
+                                const startOfMonth = new Date(
+                                  today.getFullYear(),
+                                  today.getMonth(),
+                                  1,
+                                );
+                                const endOfMonth = new Date(
+                                  today.getFullYear(),
+                                  today.getMonth() + 1,
+                                  0,
+                                );
+
+                                if (
+                                  start.toDateString() ===
+                                    startOfMonth.toDateString() &&
+                                  end.toDateString() ===
+                                    endOfMonth.toDateString()
+                                ) {
+                                  return "thisMonth";
+                                }
+
+                                return "custom";
+                              })()
+                      }
+                      onValueChange={(value) => {
+                        const today = new Date();
+                        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+                        switch (value) {
+                          case "today":
+                            setStartDate(todayStr);
+                            setEndDate(todayStr);
+                            break;
+                          case "thisWeek": {
+                            const startOfWeek = new Date(today);
+                            startOfWeek.setDate(
+                              today.getDate() - today.getDay(),
+                            );
+                            const endOfWeek = new Date(startOfWeek);
+                            endOfWeek.setDate(startOfWeek.getDate() + 6);
+                            setStartDate(
+                              `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, "0")}-${String(startOfWeek.getDate()).padStart(2, "0")}`,
+                            );
+                            setEndDate(
+                              `${endOfWeek.getFullYear()}-${String(endOfWeek.getMonth() + 1).padStart(2, "0")}-${String(endOfWeek.getDate()).padStart(2, "0")}`,
+                            );
+                            break;
+                          }
+                          case "lastWeek": {
+                            const startOfWeek = new Date(today);
+                            startOfWeek.setDate(
+                              today.getDate() - today.getDay() - 7,
+                            );
+                            const endOfWeek = new Date(startOfWeek);
+                            endOfWeek.setDate(startOfWeek.getDate() + 6);
+                            setStartDate(
+                              `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, "0")}-${String(startOfWeek.getDate()).padStart(2, "0")}`,
+                            );
+                            setEndDate(
+                              `${endOfWeek.getFullYear()}-${String(endOfWeek.getMonth() + 1).padStart(2, "0")}-${String(endOfWeek.getDate()).padStart(2, "0")}`,
+                            );
+                            break;
+                          }
+                          case "thisMonth": {
+                            const startOfMonth = new Date(
+                              today.getFullYear(),
+                              today.getMonth(),
+                              1,
+                            );
+                            const endOfMonth = new Date(
+                              today.getFullYear(),
+                              today.getMonth() + 1,
+                              0,
+                            );
+                            setStartDate(
+                              `${startOfMonth.getFullYear()}-${String(startOfMonth.getMonth() + 1).padStart(2, "0")}-${String(startOfMonth.getDate()).padStart(2, "0")}`,
+                            );
+                            setEndDate(
+                              `${endOfMonth.getFullYear()}-${String(endOfMonth.getMonth() + 1).padStart(2, "0")}-${String(endOfMonth.getDate()).padStart(2, "0")}`,
+                            );
+                            break;
+                          }
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-40">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="today">
-                          {t("reports.thisMonth")}
+                          {t("reports.toDay")}
                         </SelectItem>
-                        <SelectItem value="week">
+                        <SelectItem value="thisWeek">
                           {t("reports.thisWeek")}
                         </SelectItem>
-                        <SelectItem value="month">
-                          {t("reports.toDay")}
+                        <SelectItem value="lastWeek">
+                          {t("reports.lastWeek")}
+                        </SelectItem>
+                        <SelectItem value="thisMonth">
+                          {t("reports.thisMonth")}
                         </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {/* Bar Chart */}
-                  <div className="h-64 flex items-end justify-between gap-1 px-2 overflow-x-auto">
-                    {dailyRevenue && dailyRevenue.length > 0 ? (
-                      dailyRevenue.map((day: any, index: number) => {
-                        const maxRevenue = Math.max(
-                          ...dailyRevenue.map((d: any) => d.revenue),
-                          1,
+                  {/* Enhanced Bar Chart */}
+                  <div className="h-80 flex items-end justify-start gap-2 px-4 overflow-x-auto pb-8">
+                    {(() => {
+                      // Generate all dates in the selected range
+                      const start = new Date(startDate);
+                      const end = new Date(endDate);
+                      const dateArray: any[] = [];
+
+                      for (
+                        let dt = new Date(start);
+                        dt <= end;
+                        dt.setDate(dt.getDate() + 1)
+                      ) {
+                        const dateStr = dt.toISOString().split("T")[0];
+                        const existingData = dailyRevenue.find(
+                          (d: any) => d.date === dateStr,
                         );
+
+                        dateArray.push({
+                          date: dateStr,
+                          revenue: existingData ? existingData.revenue : 0,
+                          day: dt.getDate(),
+                          month: dt.getMonth() + 1,
+                          year: dt.getFullYear(),
+                        });
+                      }
+
+                      if (dateArray.length === 0) {
+                        return (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            {t("reports.noDataInDateRange")}
+                          </div>
+                        );
+                      }
+
+                      const maxRevenue = Math.max(
+                        ...dateArray.map((d: any) => d.revenue),
+                        1,
+                      );
+
+                      return dateArray.map((day: any, index: number) => {
                         const heightPercent = (day.revenue / maxRevenue) * 100;
+                        const hasData = day.revenue > 0;
 
                         return (
                           <div
                             key={index}
                             className="flex flex-col items-center group relative"
-                            style={{ minWidth: "30px" }}
+                            style={{
+                              minWidth: dateArray.length > 31 ? "24px" : "40px",
+                              flex: dateArray.length <= 7 ? "1" : "0 0 auto",
+                            }}
                           >
+                            {/* Bar */}
                             <div
-                              className="w-full bg-blue-500 rounded-t hover:bg-blue-600 transition-colors cursor-pointer"
+                              className={`w-full rounded-t-lg transition-all duration-300 ${
+                                hasData
+                                  ? "bg-gradient-to-t from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 shadow-lg"
+                                  : "bg-gray-200 hover:bg-gray-300"
+                              } cursor-pointer relative`}
                               style={{
-                                height: `${Math.max(heightPercent, 2)}%`,
+                                height: hasData
+                                  ? `${Math.max(heightPercent, 5)}%`
+                                  : "8px",
                                 minHeight: "8px",
                               }}
-                              title={`${new Date(day.date).getDate()}/${new Date(day.date).getMonth() + 1}: ${day.revenue.toLocaleString("vi-VN")} ₫`}
-                            ></div>
-                            <span className="text-xs text-gray-600 mt-2">
-                              {new Date(day.date).getDate()}
-                            </span>
-                            {/* Tooltip */}
-                            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 hidden group-hover:block bg-gray-900 text-white text-sm rounded-lg px-4 py-3 whitespace-nowrap z-50 shadow-xl border border-gray-700">
-                              <div className="font-semibold mb-1">
-                                {t("reports.day")}{" "}
-                                {new Date(day.date).getDate()}/
-                                {new Date(day.date).getMonth() + 1}/
-                                {new Date(day.date).getFullYear()}
+                            >
+                              {/* Animated highlight on hover */}
+                              {hasData && (
+                                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 rounded-t-lg transition-opacity duration-300"></div>
+                              )}
+                            </div>
+
+                            {/* Date label */}
+                            <div className="mt-2 text-center">
+                              <span
+                                className={`text-xs font-medium ${hasData ? "text-gray-700" : "text-gray-400"}`}
+                              >
+                                {day.day}
+                              </span>
+                              {dateArray.length <= 7 && (
+                                <div className="text-[10px] text-gray-500">
+                                  Th{day.month}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Enhanced Tooltip */}
+                            <div className="absolute bottom-full mb-3 left-1/2 transform -translate-x-1/2 hidden group-hover:block bg-gradient-to-br from-gray-900 to-gray-800 text-white text-sm rounded-xl px-5 py-4 whitespace-nowrap z-50 shadow-2xl border border-gray-600 min-w-[200px]">
+                              <div className="font-bold mb-2 text-blue-300 text-base">
+                                {day.day}/{day.month}/{day.year}
                               </div>
-                              <div className="text-green-300 font-bold">
-                                {t("reports.sales")}:{" "}
-                                {day.revenue.toLocaleString("vi-VN")} ₫
+                              <div className="space-y-1">
+                                <div className="flex justify-between items-center gap-3">
+                                  <span className="text-gray-300">
+                                    {t("reports.sales")}:
+                                  </span>
+                                  <span className="font-bold text-green-400">
+                                    {day.revenue.toLocaleString("vi-VN")} ₫
+                                  </span>
+                                </div>
+                                {!hasData && (
+                                  <div className="text-xs text-gray-400 italic mt-2">
+                                    {t("reports.noSalesData")}
+                                  </div>
+                                )}
                               </div>
                               {/* Arrow */}
                               <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-px">
-                                <div className="border-8 border-transparent border-t-gray-900"></div>
+                                <div className="border-[6px] border-transparent border-t-gray-800"></div>
                               </div>
                             </div>
                           </div>
                         );
-                      })
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        {t("reports.noDataInDateRange")}
-                      </div>
-                    )}
+                      });
+                    })()}
                   </div>
 
-                  <div className="flex justify-center gap-4 mt-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                      <span className="text-xs text-gray-600">
-                        {t("reports.salesRevenue")}
+                  {/* Legend with stats */}
+                  <div className="flex justify-between items-center mt-6 pt-4 border-t">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-gradient-to-t from-blue-600 to-blue-400 rounded"></div>
+                        <span className="text-sm text-gray-600">
+                          {t("reports.salesRevenue")}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                        <span className="text-sm text-gray-600">
+                          {t("reports.noSalesData")}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {t("reports.total")}:{" "}
+                      <span className="font-bold text-blue-600">
+                        {dailyRevenue
+                          .reduce((sum: number, d: any) => sum + d.revenue, 0)
+                          .toLocaleString("vi-VN")}{" "}
+                        ₫
                       </span>
                     </div>
                   </div>
@@ -725,37 +951,6 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                     <CardTitle className="text-lg font-semibold">
                       {t("reports.topSellingItems")}
                     </CardTitle>
-                    <div className="flex gap-2">
-                      <Select defaultValue="month">
-                        <SelectTrigger className="w-40">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="month">
-                            {t("reports.monthlyRevenue")}
-                          </SelectItem>
-                          <SelectItem value="week">
-                            {t("reports.thisWeek")}
-                          </SelectItem>
-                          <SelectItem value="day">
-                            {t("reports.toDay")}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Select defaultValue="today">
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="today">
-                            {t("reports.thisMonth")}
-                          </SelectItem>
-                          <SelectItem value="week">
-                            {t("reports.thisWeek")}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
                   </CardHeader>
                   <CardContent className="flex gap-6">
                     {/* Product List */}
@@ -1055,7 +1250,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                     >
                       <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                     </svg>
-                    {t("reports.menuAnalysisTab")}
+                    {t("reports.productAnalysisTab")}
                   </TabsTrigger>
 
                   <TabsTrigger
@@ -1220,19 +1415,21 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                     </span>
                   </button>
 
-                  <button
-                    onClick={() => setSettingsSubTab("general")}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
-                      settingsSubTab === "general"
-                        ? "bg-green-100 text-green-700"
-                        : "hover:bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    <SettingsIcon className="w-5 h-5 flex-shrink-0" />
-                    <span className="font-medium whitespace-nowrap">
-                      {t("settings.generalSettings")}
-                    </span>
-                  </button>
+                  {storeSettings?.isAdmin && (
+                    <button
+                      onClick={() => setSettingsSubTab("general")}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
+                        settingsSubTab === "general"
+                          ? "bg-green-100 text-green-700"
+                          : "hover:bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      <SettingsIcon className="w-5 h-5 flex-shrink-0" />
+                      <span className="font-medium whitespace-nowrap">
+                        {t("settings.generalSettings")}
+                      </span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Right Content Area */}

@@ -3029,16 +3029,18 @@ export default function SalesOrders() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex items-center gap-2 border-red-500 text-red-600 hover:bg-red-50"
-                    disabled={selectedOrderIds.size === 0}
-                    onClick={() => setShowBulkCancelDialog(true)}
-                  >
-                    <X className="w-4 h-4" />
-                    {t("common.cancelOrder")} ({selectedOrderIds.size})
-                  </Button>
+                  {storeSettings?.typeUser === 1 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex items-center gap-2 border-red-500 text-red-600 hover:bg-red-50"
+                      disabled={selectedOrderIds.size === 0}
+                      onClick={() => setShowBulkCancelDialog(true)}
+                    >
+                      <X className="w-4 h-4" />
+                      {t("common.cancelOrder")} ({selectedOrderIds.size})
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"

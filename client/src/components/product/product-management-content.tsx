@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Package, Plus, Edit, Trash2, Search } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +20,8 @@ export default function ProductManagementContent() {
   const [showProductManager, setShowProductManager] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productSearchTerm, setProductSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const { data: productsData, isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products"],
@@ -32,6 +35,18 @@ export default function ProductManagementContent() {
     product.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
     product.sku?.toLowerCase().includes(productSearchTerm.toLowerCase())
   ) || [];
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredProducts.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search term changes
+  const handleSearchChange = (value: string) => {
+    setProductSearchTerm(value);
+    setCurrentPage(1);
+  };
 
   const getCategoryName = (categoryId: number) => {
     const category = categoriesData?.find((c) => c.id === categoryId);
@@ -128,7 +143,7 @@ export default function ProductManagementContent() {
                 placeholder={t("inventory.searchProducts")}
                 className="w-64"
                 value={productSearchTerm}
-                onChange={(e) => setProductSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
               />
               <Button variant="outline" size="sm">
                 <Search className="w-4 h-4 mr-2" />
@@ -160,7 +175,7 @@ export default function ProductManagementContent() {
               </div>
 
               <div className="divide-y">
-                {filteredProducts.map((product) => (
+                {paginatedProducts.map((product) => (
                   <div key={product.id} className="grid grid-cols-8 gap-4 p-4 items-center">
                     <div className="font-mono text-sm">{product.sku || "-"}</div>
                     <div className="font-medium">{product.name}</div>
@@ -171,16 +186,22 @@ export default function ProductManagementContent() {
                     <div className="text-center">{product.stock || 0}</div>
                     <div className="text-sm text-gray-600">{product.unit || "-"}</div>
                     <div>
-                      <Badge
-                        variant="default"
-                        className={`${
-                          product.stock > 0
-                            ? "bg-green-500"
-                            : "bg-red-500"
-                        } text-white`}
-                      >
-                        {product.stock > 0 ? t("common.active") : t("common.outOfStock")}
-                      </Badge>
+                      {product.trackInventory !== false ? (
+                        <Badge
+                          variant="default"
+                          className={`${
+                            product.stock > 0
+                              ? "bg-green-500"
+                              : "bg-red-500"
+                          } text-white`}
+                        >
+                          {product.stock > 0 ? t("common.active") : t("common.outOfStock")}
+                        </Badge>
+                      ) : (
+                        <Badge variant="default" className="bg-blue-500 text-white">
+                          {t("common.active")}
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center justify-center gap-2">
                       <Button variant="ghost" size="sm" onClick={() => { setEditingProduct(product); setShowProductManager(true); }}>
@@ -194,9 +215,67 @@ export default function ProductManagementContent() {
           )}
 
           <div className="flex justify-between items-center mt-6">
-            <div className="text-sm text-gray-600">
-              {t("common.total")} {productsData?.length || 0} {t("common.product")}
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-600">
+                {t("common.total")} {filteredProducts.length} {t("common.product")}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">{t("common.show")}</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="h-8 w-[70px] rounded-md border border-input bg-background px-2 text-sm"
+                >
+                  <option value="15">15</option>
+                  <option value="20">20</option>
+                  <option value="30">30</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+                <span className="text-sm font-medium">{t("common.rows")}</span>
+              </div>
             </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium">
+                  {t("common.page")} {currentPage} / {totalPages}
+                </p>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 w-8"
+                  >
+                    «
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((prev) => prev - 1)}
+                    disabled={currentPage === 1}
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 w-8"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((prev) => prev + 1)}
+                    disabled={currentPage === totalPages}
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 w-8"
+                  >
+                    ›
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 w-8"
+                  >
+                    »
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

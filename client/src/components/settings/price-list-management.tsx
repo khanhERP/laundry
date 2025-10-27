@@ -125,6 +125,8 @@ export function PriceListManagement() {
     description: "",
     isActive: true,
     storeCodes: [] as string[],
+    validFrom: "",
+    validTo: "",
   });
   const [storeFilter, setStoreFilter] = useState<string>("all");
 
@@ -285,6 +287,9 @@ export function PriceListManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists"] });
+      queryClient.invalidateQueries({
+        queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists/next-code"],
+      });
       toast({
         title: "Thành công",
         description: "Tạo bảng giá thành công",
@@ -389,12 +394,12 @@ export function PriceListManagement() {
         ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
         (old: any) => {
           if (!old) return old;
-          
+
           // Tìm item cần update
           const existingItemIndex = old.findIndex(
             (item: any) =>
               item.priceListId === variables.priceListId &&
-              item.productId === variables.productId
+              item.productId === variables.productId,
           );
 
           if (existingItemIndex !== -1) {
@@ -428,11 +433,11 @@ export function PriceListManagement() {
         ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
         (old: any) => {
           if (!old) return [data];
-          
+
           const existingItemIndex = old.findIndex(
             (item: any) =>
               item.priceListId === variables.priceListId &&
-              item.productId === variables.productId
+              item.productId === variables.productId,
           );
 
           if (existingItemIndex !== -1) {
@@ -506,6 +511,8 @@ export function PriceListManagement() {
       description: "",
       isActive: true,
       storeCodes: [],
+      validFrom: "",
+      validTo: "",
     });
   };
 
@@ -584,6 +591,8 @@ export function PriceListManagement() {
       storeCodes: priceList.storeCode
         ? priceList.storeCode.split(",").map((s: string) => s.trim())
         : [],
+      validFrom: priceList.validFrom ? priceList.validFrom.split("T")[0] : "",
+      validTo: priceList.validTo ? priceList.validTo.split("T")[0] : "",
     });
     setIsDialogOpen(true);
   };
@@ -854,18 +863,6 @@ export function PriceListManagement() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (selectedPriceLists.length === 0) {
-      toast({
-        title: "Lỗi",
-        description: "Vui lòng chọn bảng giá trước khi import",
-        variant: "destructive",
-      });
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      return;
-    }
-
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
@@ -882,18 +879,17 @@ export function PriceListManagement() {
         }
 
         const headers = jsonData[0];
-        const priceListColumns: { [key: number]: number } = {};
 
-        // Map price list names to column indexes
-        selectedPriceLists.forEach((plId) => {
-          const pl = priceLists.find((p: PriceList) => p.id === plId);
-          if (pl) {
-            const colIndex = headers.findIndex((h) => h === pl.name);
-            if (colIndex !== -1) {
-              priceListColumns[plId] = colIndex;
-            }
-          }
-        });
+        // Validate headers
+        if (
+          headers[0] !== "Mã bảng giá" ||
+          headers[1] !== "Mã sản phẩm" ||
+          headers[2] !== "Giá sản phẩm"
+        ) {
+          throw new Error(
+            "File Excel không đúng định dạng. Vui lòng sử dụng file mẫu với các cột: Mã bảng giá, Mã sản phẩm, Giá sản phẩm",
+          );
+        }
 
         // Process rows
         const updates: Array<{
@@ -904,31 +900,37 @@ export function PriceListManagement() {
 
         for (let i = 1; i < jsonData.length; i++) {
           const row = jsonData[i];
-          const sku = row[0]?.toString().trim();
+          const priceListCode = row[0]?.toString().trim();
+          const productSku = row[1]?.toString().trim();
+          const price = row[2]?.toString().trim();
 
-          if (!sku) continue;
+          if (!priceListCode || !productSku || !price) continue;
 
-          // Find product by SKU
-          const product = allProducts.find((p: Product) => p.sku === sku);
-          if (!product) {
-            console.warn(`Không tìm thấy sản phẩm với SKU: ${sku}`);
+          // Find price list by code
+          const priceList = priceLists.find(
+            (pl: PriceList) => pl.code === priceListCode,
+          );
+          if (!priceList) {
+            console.warn(`Không tìm thấy bảng giá với mã: ${priceListCode}`);
             continue;
           }
 
-          // Get prices from columns
-          selectedPriceLists.forEach((plId) => {
-            const colIndex = priceListColumns[plId];
-            if (colIndex !== undefined && row[colIndex]) {
-              const price = row[colIndex].toString().trim();
-              if (price && !isNaN(parseFloat(price))) {
-                updates.push({
-                  priceListId: plId,
-                  productId: product.id,
-                  price: parseFloat(price).toString(),
-                });
-              }
-            }
-          });
+          // Find product by SKU
+          const product = allProducts.find(
+            (p: Product) => p.sku === productSku,
+          );
+          if (!product) {
+            console.warn(`Không tìm thấy sản phẩm với SKU: ${productSku}`);
+            continue;
+          }
+
+          if (!isNaN(parseFloat(price))) {
+            updates.push({
+              priceListId: priceList.id,
+              productId: product.id,
+              price: parseFloat(price).toString(),
+            });
+          }
         }
 
         if (updates.length === 0) {
@@ -955,10 +957,10 @@ export function PriceListManagement() {
         }
 
         await queryClient.invalidateQueries({
-          queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
+          queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items"],
         });
         await queryClient.refetchQueries({
-          queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
+          queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items"],
         });
 
         toast({
@@ -997,25 +999,25 @@ export function PriceListManagement() {
       return;
     }
 
+    // Create template with only 3 columns: Price List Code, Product SKU, Price
     const template = [
-      [
-        "Mã hàng",
-        "Tên hàng",
-        "Nhóm hàng",
-        ...selectedPriceLists.map((plId) => {
-          const pl = priceLists.find((p: PriceList) => p.id === plId);
-          return pl?.name || `Bảng giá ${plId}`;
-        }),
-      ],
-      [
-        "ITEM-001",
-        "Sản phẩm mẫu",
-        "Danh mục mẫu",
-        ...selectedPriceLists.map(() => "100000"),
-      ],
+      ["Mã bảng giá", "Mã sản phẩm", "Giá sản phẩm"],
+      ...selectedPriceLists.map((plId) => {
+        const pl = priceLists.find((p: PriceList) => p.id === plId);
+        return [pl?.code || `BG-${plId}`, "ITEM-001", "100000"];
+      }),
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(template);
+
+    // Auto-fit column widths
+    const colWidths = [
+      { wch: 20 }, // Mã bảng giá
+      { wch: 20 }, // Mã sản phẩm
+      { wch: 15 }, // Giá sản phẩm
+    ];
+    ws["!cols"] = colWidths;
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Mẫu bảng giá");
     XLSX.writeFile(wb, "mau_bang_gia.xlsx");
@@ -1038,7 +1040,9 @@ export function PriceListManagement() {
               <SelectValue placeholder="Chọn cửa hàng" />
             </SelectTrigger>
             <SelectContent>
-              {isAdmin && <SelectItem value="all">Tất cả</SelectItem>}
+              {isAdmin && (
+                <SelectItem value="all">{t("common.all")}</SelectItem>
+              )}
               {availableStores.map((store: any) => (
                 <SelectItem key={store.id} value={store.storeCode}>
                   {store.storeName} ({store.storeCode})
@@ -1052,13 +1056,56 @@ export function PriceListManagement() {
           <h3 className="text-lg font-semibold">{t("settings.priceLists")}</h3>
           <Button
             size="sm"
-            onClick={() => setIsDialogOpen(true)}
+            onClick={() => {
+              setEditingPriceList(null);
+              setPriceListForm({
+                code: "",
+                name: "",
+                description: "",
+                isActive: true,
+                storeCodes: [],
+                validFrom: "",
+                validTo: "",
+              });
+
+              setIsDialogOpen(true);
+            }}
             className="h-8"
           >
             <Plus className="w-4 h-4 mr-1" />
             {t("settings.createNewPriceList")}
           </Button>
         </div>
+
+        {/* Check All Checkbox */}
+        {filteredPriceLists.length > 0 && (
+          <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border border-gray-200">
+            <input
+              type="checkbox"
+              id="check-all-price-lists"
+              checked={
+                selectedPriceLists.length === filteredPriceLists.length &&
+                filteredPriceLists.length > 0
+              }
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setSelectedPriceLists(
+                    filteredPriceLists.map((pl: PriceList) => pl.id),
+                  );
+                } else {
+                  setSelectedPriceLists([]);
+                }
+              }}
+              className="w-4 h-4 cursor-pointer"
+            />
+            <label
+              htmlFor="check-all-price-lists"
+              className="text-sm font-medium cursor-pointer select-none"
+            >
+              {t("settings.selectAllPriceLists")} ({filteredPriceLists.length})
+            </label>
+          </div>
+        )}
 
         <div className="space-y-2">
           {priceListsLoading ? (
@@ -2045,7 +2092,7 @@ export function PriceListManagement() {
                 {t("settings.priceListCode")}{" "}
                 {!editingPriceList && (
                   <span className="text-xs text-gray-500">
-                    (Tự động tạo nếu để trống)
+                    {t("settings.priceListCodeAutoHint")}
                   </span>
                 )}
                 {editingPriceList && <span className="text-red-500">*</span>}
@@ -2058,17 +2105,18 @@ export function PriceListManagement() {
                 }
                 placeholder={
                   editingPriceList
-                    ? "Nhập mã bảng giá"
-                    : "Để trống để tự động tạo (VD: BG-0000001)"
+                    ? t("settings.enterPriceListName")
+                    : t("settings.priceListCodeAutoGenerated")
                 }
                 required={editingPriceList}
-                disabled={
-                  !editingPriceList && nextCodeData?.code ? false : false
+                disabled={editingPriceList}
+                className={
+                  editingPriceList ? "bg-gray-100 cursor-not-allowed" : ""
                 }
               />
               {!editingPriceList && nextCodeData?.code && (
                 <p className="text-xs text-green-600">
-                  Mã tiếp theo sẽ là: <strong>{nextCodeData.code}</strong>
+                  {t("settings.nextCodeWillBe")} <strong>{nextCodeData.code}</strong>
                 </p>
               )}
             </div>
@@ -2108,12 +2156,12 @@ export function PriceListManagement() {
 
             <div className="space-y-2">
               <Label htmlFor="storeCodes">
-                Cửa hàng áp dụng <span className="text-red-500">*</span>
+                {t("settings.selectStoresRequired")}
               </Label>
               <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
                 {availableStores.length === 0 ? (
                   <p className="text-sm text-gray-500">
-                    Không có chi nhánh nào
+                    {t("settings.noStoresYet")}
                   </p>
                 ) : (
                   availableStores.map((store: any) => (
@@ -2164,9 +2212,42 @@ export function PriceListManagement() {
               </div>
               <p className="text-xs text-gray-500">
                 {isAdmin
-                  ? "Bạn có thể chọn nhiều cửa hàng"
-                  : "Bạn chỉ có thể chọn 1 chi nhánh được phân quyền"}
+                  ? t("settings.selectAll")
+                  : t("settings.canSelectOnlyOneStore")}
               </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="validFrom">{t("settings.applyFromDate")}</Label>
+                <Input
+                  id="validFrom"
+                  type="date"
+                  value={priceListForm.validFrom}
+                  onChange={(e) =>
+                    setPriceListForm({
+                      ...priceListForm,
+                      validFrom: e.target.value,
+                    })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="validTo">{t("settings.applyToDate")}</Label>
+                <Input
+                  id="validTo"
+                  type="date"
+                  value={priceListForm.validTo}
+                  onChange={(e) =>
+                    setPriceListForm({
+                      ...priceListForm,
+                      validTo: e.target.value,
+                    })
+                  }
+                  min={priceListForm.validFrom || undefined}
+                />
+              </div>
             </div>
 
             <DialogFooter>

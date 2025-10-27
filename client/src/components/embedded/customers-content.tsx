@@ -72,7 +72,14 @@ export default function CustomersPageContent() {
     isLoading: customersLoading,
     refetch: refetchCustomers,
   } = useQuery({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers", currentPage, pageSize, customerSearchTerm, storeFilter, isAdmin],
+    queryKey: [
+      "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers",
+      currentPage,
+      pageSize,
+      customerSearchTerm,
+      storeFilter,
+      isAdmin,
+    ],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: currentPage.toString(),
@@ -80,17 +87,17 @@ export default function CustomersPageContent() {
         search: customerSearchTerm,
         storeFilter: storeFilter || "all",
       });
-      
-      console.log('🔍 Fetching customers with params:', {
+
+      console.log("🔍 Fetching customers with params:", {
         page: currentPage,
         limit: pageSize,
         search: customerSearchTerm,
         storeFilter: storeFilter || "all",
         isAdmin,
       });
-      
+
       const response = await fetch(`https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch customers');
+      if (!response.ok) throw new Error("Failed to fetch customers");
       return response.json();
     },
     staleTime: 30000,
@@ -422,7 +429,7 @@ export default function CustomersPageContent() {
                 <span className="text-sm font-medium">{t("common.rows")}</span>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-4">
               {totalPages > 1 && (
                 <div className="flex items-center gap-2">
@@ -461,8 +468,6 @@ export default function CustomersPageContent() {
                   </div>
                 </div>
               )}
-              
-              
             </div>
           </div>
         </CardContent>

@@ -79,6 +79,7 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
     // Tab names for reports
     salesAnalysisTab: "Báo cáo phân tích bán hàng",
     menuAnalysisTab: "Báo cáo phân tích menu",
+    productAnalysisTab: "Phân tích sản phẩm",
     tableAnalysisTab: "Báo cáo phân tích bàn",
     salesChartTab: "Báo cáo bán hàng",
     purchaseTab: "Báo cáo mua hàng",
@@ -661,6 +662,7 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
     // Tab names for reports
     salesAnalysisTab: "매출 분석 보고서",
     menuAnalysisTab: "메뉴 분석 보고서",
+    productAnalysisTab: "제품 분석",
     tableAnalysisTab: "테이블 분석 보고서",
     salesChartTab: "매출 보고서",
     purchaseTab: "구매 보고서",
@@ -1238,6 +1240,7 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
     // Tab names for reports
     salesAnalysisTab: "Sales Analysis Report",
     menuAnalysisTab: "Menu Analysis Report",
+    productAnalysisTab: "Product Analysis",
     tableAnalysisTab: "Table Analysis Report",
     salesChartTab: "Sales Report",
     purchaseTab: "Purchase Report",

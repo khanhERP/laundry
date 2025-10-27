@@ -291,7 +291,7 @@ function MenuReport() {
           <CardTitle className="text-lg flex items-center justify-between">
             <div className="flex items-center gap-2">
               <BarChart3 className="w-5 h-5" />
-              {t("reports.menuAnalysis") || "Phân tích menu"}
+              {t("reports.productAnalysisTab")}
             </div>
           </CardTitle>
         </CardHeader>
@@ -783,7 +783,7 @@ function MenuReport() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>{t("reports.menuAnalysis") || "Phân tích theo menu"}</span>
+            <span>{t("reports.productAnalysisTab")}</span>
           </CardTitle>
         </CardHeader>
         <CardContent>

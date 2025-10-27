@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Users, Plus, Edit, Trash2, Search } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -19,9 +21,16 @@ export default function SuppliersPageContent() {
   const [showSupplierForm, setShowSupplierForm] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [storeFilter, setStoreFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const { data: suppliersData, isLoading: suppliersLoading } = useQuery<Supplier[]>({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/suppliers"],
+  });
+
+  const { data: storesData } = useQuery({
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list"],
   });
 
   const handleEditSupplier = (supplier: Supplier) => {
@@ -43,10 +52,33 @@ export default function SuppliersPageContent() {
     }
   };
 
-  const filteredSuppliers = suppliersData?.filter((supplier: Supplier) =>
-    supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (supplier.phone && supplier.phone.includes(searchTerm))
-  ) || [];
+  const filteredSuppliers = suppliersData?.filter((supplier: Supplier) => {
+    const matchesSearch = 
+      supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (supplier.phone && supplier.phone.includes(searchTerm)) ||
+      (supplier.email && supplier.email.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesStore = storeFilter === "all" || supplier.storeCode === storeFilter;
+    
+    return matchesSearch && matchesStore;
+  }) || [];
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredSuppliers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedSuppliers = filteredSuppliers.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleStoreFilterChange = (value: string) => {
+    setStoreFilter(value);
+    setCurrentPage(1);
+  };
 
   return (
     <div className="space-y-6">
@@ -73,8 +105,23 @@ export default function SuppliersPageContent() {
                 placeholder={t("suppliers.searchPlaceholder")}
                 className="w-64"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
               />
+              <Select value={storeFilter} onValueChange={handleStoreFilterChange}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder={t("common.allStores")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("common.allStores")}</SelectItem>
+                  {storesData?.map((store: any) => (
+                    store.storeCode && (
+                      <SelectItem key={store.storeCode} value={store.storeCode}>
+                        {store.storeName} ({store.storeCode})
+                      </SelectItem>
+                    )
+                  ))}
+                </SelectContent>
+              </Select>
               <Button variant="outline" size="sm">
                 <Search className="w-4 h-4 mr-2" />
                 {t("common.search")}
@@ -92,32 +139,36 @@ export default function SuppliersPageContent() {
               <p className="text-gray-500">{t("suppliers.noSuppliers")}</p>
             </div>
           ) : (
-            <div className="rounded-md border overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b bg-gray-50">
-                    <th className="p-4 text-left font-medium text-sm text-gray-600 min-w-[150px]">
-                      {t("suppliers.name")}
-                    </th>
-                    <th className="p-4 text-left font-medium text-sm text-gray-600 min-w-[120px]">
-                      {t("suppliers.phone")}
-                    </th>
-                    <th className="p-4 text-left font-medium text-sm text-gray-600 min-w-[180px]">
-                      {t("suppliers.email")}
-                    </th>
-                    <th className="p-4 text-left font-medium text-sm text-gray-600 min-w-[200px]">
-                      {t("suppliers.address")}
-                    </th>
-                    <th className="p-4 text-left font-medium text-sm text-gray-600 w-[100px]">
-                      {t("common.status")}
-                    </th>
-                    <th className="p-4 text-center font-medium text-sm text-gray-600 w-[120px]">
-                      {t("common.actions")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {filteredSuppliers.map((supplier) => (
+            <>
+              <div className="mb-4 text-sm text-gray-600">
+                {t("common.showing")} {startIndex + 1}-{Math.min(endIndex, filteredSuppliers.length)} {t("common.of")} {filteredSuppliers.length} {t("suppliers.suppliers")}
+              </div>
+              <div className="rounded-md border overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-gray-50">
+                      <th className="p-4 text-left font-medium text-sm text-gray-600 min-w-[150px]">
+                        {t("suppliers.name")}
+                      </th>
+                      <th className="p-4 text-left font-medium text-sm text-gray-600 min-w-[120px]">
+                        {t("suppliers.phone")}
+                      </th>
+                      <th className="p-4 text-left font-medium text-sm text-gray-600 min-w-[180px]">
+                        {t("suppliers.email")}
+                      </th>
+                      <th className="p-4 text-left font-medium text-sm text-gray-600 min-w-[200px]">
+                        {t("suppliers.address")}
+                      </th>
+                      <th className="p-4 text-left font-medium text-sm text-gray-600 w-[100px]">
+                        {t("common.status")}
+                      </th>
+                      <th className="p-4 text-center font-medium text-sm text-gray-600 w-[120px]">
+                        {t("common.actions")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {paginatedSuppliers.map((supplier) => (
                     <tr key={supplier.id} className="hover:bg-gray-50">
                       <td className="p-4 font-medium">{supplier.name}</td>
                       <td className="p-4 text-sm text-gray-600">{supplier.phone || "-"}</td>
@@ -145,9 +196,44 @@ export default function SuppliersPageContent() {
                       </td>
                     </tr>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                  </tbody>
+                </table>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="mt-6">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious 
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                      
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            onClick={() => setCurrentPage(page)}
+                            isActive={currentPage === page}
+                            className="cursor-pointer"
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
+                      
+                      <PaginationItem>
+                        <PaginationNext 
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -155,7 +241,7 @@ export default function SuppliersPageContent() {
       <SupplierFormModal
         isOpen={showSupplierForm}
         onClose={() => { setShowSupplierForm(false); setEditingSupplier(null); }}
-        supplier={editingSupplier}
+        supplier={editingSupplier || undefined}
       />
     </div>
   );

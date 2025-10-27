@@ -1900,6 +1900,11 @@ export interface SuppliersTranslations {
   bankAccount: string;
   bankAccountPlaceholder: string;
   cash: string;
+  paymentTermsCash: string;
+  paymentTerms15Days: string;
+  paymentTerms30Days: string;
+  paymentTerms60Days: string;
+  paymentTerms90Days: string;
   notes: string;
   notesPlaceholder: string;
   status: string;
