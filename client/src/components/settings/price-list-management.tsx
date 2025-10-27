@@ -68,6 +68,7 @@ interface PriceList {
   validTo?: string;
   createdAt: string;
   updatedAt: string;
+  storeCode?: string; // Added to satisfy the type
 }
 
 interface PriceListItem {
@@ -244,6 +245,8 @@ export function PriceListManagement() {
       return allItems.flat();
     },
     enabled: selectedPriceLists.length > 0,
+    refetchOnMount: false, // Không refetch khi mount
+    refetchOnWindowFocus: false, // Không refetch khi focus
   });
 
   // Create mutation
@@ -369,31 +372,91 @@ export function PriceListManagement() {
       if (!response.ok) throw new Error("Failed to update price");
       return response.json();
     },
-    onSuccess: (_, variables) => {
-      // Không invalidate query ngay để tránh reset input
-      // Chỉ update cache một cách optimistic
+    onMutate: async (variables) => {
+      // Cancel any outgoing refetches để tránh ghi đè optimistic update
+      await queryClient.cancelQueries({
+        queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
+      });
+
+      // Snapshot giá trị hiện tại
+      const previousData = queryClient.getQueryData([
+        "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items",
+        selectedPriceLists,
+      ]);
+
+      // Optimistically update cache ngay lập tức
       queryClient.setQueryData(
         ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
         (old: any) => {
           if (!old) return old;
-          return old.map((item: any) =>
-            item.priceListId === variables.priceListId &&
-            item.productId === variables.productId
-              ? { ...item, price: variables.price }
-              : item
+          
+          // Tìm item cần update
+          const existingItemIndex = old.findIndex(
+            (item: any) =>
+              item.priceListId === variables.priceListId &&
+              item.productId === variables.productId
           );
-        }
+
+          if (existingItemIndex !== -1) {
+            // Update item đã tồn tại
+            const newData = [...old];
+            newData[existingItemIndex] = {
+              ...newData[existingItemIndex],
+              price: variables.price,
+            };
+            return newData;
+          } else {
+            // Thêm item mới nếu chưa tồn tại
+            return [
+              ...old,
+              {
+                priceListId: variables.priceListId,
+                productId: variables.productId,
+                price: variables.price,
+              },
+            ];
+          }
+        },
+      );
+
+      // Return context để có thể rollback nếu lỗi
+      return { previousData };
+    },
+    onSuccess: (data, variables) => {
+      // Update lại cache với data từ server (đảm bảo có ID)
+      queryClient.setQueryData(
+        ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
+        (old: any) => {
+          if (!old) return [data];
+          
+          const existingItemIndex = old.findIndex(
+            (item: any) =>
+              item.priceListId === variables.priceListId &&
+              item.productId === variables.productId
+          );
+
+          if (existingItemIndex !== -1) {
+            const newData = [...old];
+            newData[existingItemIndex] = data;
+            return newData;
+          } else {
+            return [...old, data];
+          }
+        },
       );
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _variables, context) => {
+      // Rollback về giá trị cũ nếu có lỗi
+      if (context?.previousData) {
+        queryClient.setQueryData(
+          ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
+          context.previousData,
+        );
+      }
       toast({
         title: "Lỗi",
         description: error.message,
         variant: "destructive",
-      });
-      // Chỉ refetch khi có lỗi để restore giá trị đúng
-      queryClient.invalidateQueries({
-        queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
       });
     },
   });
@@ -1128,7 +1191,8 @@ export function PriceListManagement() {
               }) && (
                 <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-sm text-blue-700">
-                    <strong>{t("settings.readOnlyMode")}:</strong> {t("settings.readOnlyModeDesc")}
+                    <strong>{t("settings.readOnlyMode")}:</strong>{" "}
+                    {t("settings.readOnlyModeDesc")}
                   </p>
                 </div>
               )}
@@ -1176,9 +1240,8 @@ export function PriceListManagement() {
                       );
                       return (
                         pl?.storeCode &&
-                        pl.storeCode
-                          .split(",")
-                          .filter((s: string) => s.trim()).length > 1
+                        pl.storeCode.split(",").filter((s: string) => s.trim())
+                          .length > 1
                       );
                     }))
                 }
@@ -1223,9 +1286,8 @@ export function PriceListManagement() {
                       );
                       return (
                         pl?.storeCode &&
-                        pl.storeCode
-                          .split(",")
-                          .filter((s: string) => s.trim()).length > 1
+                        pl.storeCode.split(",").filter((s: string) => s.trim())
+                          .length > 1
                       );
                     }))
                 }
