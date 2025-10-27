@@ -254,7 +254,7 @@ export default function CustomersPageContent() {
               {isAdmin && (
                 <div className="flex items-center gap-2">
                   <Label className="text-sm whitespace-nowrap">
-                    {t("customers.filterByStore")}:
+                    {t("common.shop")}:
                   </Label>
                   <Select
                     value={storeFilter}
