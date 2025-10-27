@@ -254,7 +254,7 @@ export default function CustomersPageContent() {
               {isAdmin && (
                 <div className="flex items-center gap-2">
                   <Label className="text-sm whitespace-nowrap">
-                    Chi nhánh:
+                    {t("customers.filterByStore")}:
                   </Label>
                   <Select
                     value={storeFilter}
@@ -262,10 +262,10 @@ export default function CustomersPageContent() {
                     disabled={storesLoading}
                   >
                     <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Tất cả chi nhánh" />
+                      <SelectValue placeholder={t("common.all")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Tất cả chi nhánh</SelectItem>
+                      <SelectItem value="all">{t("common.all")}</SelectItem>
                       {storesData
                         ?.filter((store: any) => store.typeUser !== 1)
                         .map((store: any) => (
