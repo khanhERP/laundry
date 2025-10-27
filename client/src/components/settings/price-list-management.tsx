@@ -1128,8 +1128,7 @@ export function PriceListManagement() {
               }) && (
                 <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-sm text-blue-700">
-                    <strong>Chế độ chỉ xem:</strong> Bảng giá này áp dụng cho
-                    nhiều cửa hàng. Chỉ Admin mới có quyền chỉnh sửa.
+                    <strong>{t("settings.readOnlyMode")}:</strong> {t("settings.readOnlyModeDesc")}
                   </p>
                 </div>
               )}

@@ -508,6 +508,8 @@ export const settingsTranslations: { [key: string]: SettingsTranslations } = {
       enterUsername: "사용자 이름을 입력하세요",
       enterPassword: "비밀번호를 입력하세요",
     },
+    readOnlyMode: "읽기 전용 모드",
+    readOnlyModeDesc: "이 가격표는 여러 매장에 적용됩니다. 관리자만 편집할 수 있습니다.",
   },
   en: {
     title: "Settings",
@@ -1028,6 +1030,8 @@ export const settingsTranslations: { [key: string]: SettingsTranslations } = {
       enterUsername: "Please enter username",
       enterPassword: "Please enter password",
     },
+    readOnlyMode: "Read-only Mode",
+    readOnlyModeDesc: "This price list applies to multiple stores. Only Admin can edit.",
     categoryIcons: {
       mainDish: "Main Dishes",
       beverages: "Beverages",
@@ -1555,5 +1559,7 @@ export const settingsTranslations: { [key: string]: SettingsTranslations } = {
       enterUsername: "Vui lòng nhập tên người dùng",
       enterPassword: "Vui lòng nhập mật khẩu",
     },
+    readOnlyMode: "Chế độ chỉ xem",
+    readOnlyModeDesc: "Bảng giá này áp dụng cho nhiều cửa hàng. Chỉ Admin mới có quyền chỉnh sửa.",
   },
 };
