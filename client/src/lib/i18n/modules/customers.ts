@@ -6,6 +6,7 @@ export const customersTranslations: { [key: string]: CustomersTranslations } = {
     description: "고객 정보를 관리합니다",
     customerManagement: "고객 관리",
     addCustomer: "고객 추가",
+    loadingCustomerData: "고객 데이터를 불러오는 중...",
     editCustomer: "고객 수정",
     deleteCustomer: "고객 삭제",
     searchPlaceholder: "고객명, 고객ID, 전화번호로 검색",
@@ -150,6 +151,7 @@ export const customersTranslations: { [key: string]: CustomersTranslations } = {
     customerManagement: "Customer Management",
     addCustomer: "Add Customer",
     editCustomer: "Edit Customer",
+    loadingCustomerData: "Loading customer data...",
     deleteCustomer: "Delete Customer",
     searchPlaceholder: "Search by name, customer ID, or phone",
     customerId: "Customer ID",
@@ -291,6 +293,7 @@ export const customersTranslations: { [key: string]: CustomersTranslations } = {
   vi: {
     title: "Quản lý khách hàng",
     description: "Quản lý thông tin khách hàng",
+    loadingCustomerData: "Đang tải dữ liệu khách hàng...",
     customerManagement: "Quản lý khách hàng",
     addCustomer: "Thêm khách hàng",
     editCustomer: "Sửa khách hàng",
