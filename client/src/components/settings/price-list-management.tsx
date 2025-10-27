@@ -1251,273 +1251,333 @@ export function PriceListManagement() {
             </div>
 
             {/* Products Table */}
-            <div className="flex-1 overflow-auto border rounded-lg">
-              <Table>
-                <TableHeader className="sticky top-0 bg-white z-10">
-                  <TableRow>
-                    <TableHead className="w-32">
-                      {t("settings.productCode")}
-                    </TableHead>
-                    <TableHead className="min-w-[200px]">
-                      {t("settings.productName")}
-                    </TableHead>
-                    {selectedPriceLists.map((priceListId) => {
-                      const priceList = priceLists.find(
-                        (pl: PriceList) => pl.id === priceListId,
-                      );
-                      return (
-                        <TableHead
-                          key={priceListId}
-                          className="w-40 text-right bg-blue-50"
-                        >
-                          {priceList?.name || t("settings.priceLists")}
-                        </TableHead>
-                      );
-                    })}
-                    <TableHead className="w-24 text-center">
-                      {t("common.actions")}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selectedPriceLists.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={3 + selectedPriceLists.length}
-                        className="text-center py-8 text-gray-500"
-                      >
-                        {t("settings.selectPriceListFirst")}
-                      </TableCell>
-                    </TableRow>
-                  ) : paginatedProducts.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={3 + selectedPriceLists.length}
-                        className="text-center py-8 text-gray-500"
-                      >
-                        {t("settings.noProductsInPriceList")}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginatedProducts.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell className="font-mono text-sm">
-                          {product.sku}
-                        </TableCell>
-                        <TableCell>{product.name}</TableCell>
-                        {selectedPriceLists.map((priceListId, colIndex) => {
-                          const key = `${priceListId}-${product.id}`;
-                          const editingValue = editingPrices[key];
-                          const currentValue =
-                            editingValue !== undefined
-                              ? editingValue
-                              : product.prices[priceListId] || "";
-
-                          // Find the price list to check store count
-                          const priceList = priceLists.find(
-                            (pl: PriceList) => pl.id === priceListId,
-                          );
-                          const storeCount = priceList?.storeCode
-                            ? priceList.storeCode
-                                .split(",")
-                                .filter((s: string) => s.trim()).length
-                            : 0;
-
-                          // Allow editing only if admin OR price list is for single store
-                          const canEdit = isAdmin || storeCount <= 1;
-
-                          return (
-                            <TableCell key={priceListId} className="text-right">
-                              <Input
-                                type="number"
-                                value={currentValue}
-                                data-price-input={`${product.id}-${colIndex}`}
-                                onChange={(e) =>
-                                  handlePriceInputChange(
-                                    priceListId,
-                                    product.id,
-                                    e.target.value,
-                                  )
-                                }
-                                onBlur={(e) =>
-                                  handlePriceSave(
-                                    priceListId,
-                                    product.id,
-                                    e.target.value,
-                                  )
-                                }
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
-
-                                    // Save current value
-                                    handlePriceSave(
-                                      priceListId,
-                                      product.id,
-                                      e.currentTarget.value,
-                                    );
-
-                                    // Move to next cell
-                                    const nextColIndex = colIndex + 1;
-                                    if (
-                                      nextColIndex < selectedPriceLists.length
-                                    ) {
-                                      // Move to next column in same row
-                                      setTimeout(() => {
-                                        const nextInput =
-                                          document.querySelector(
-                                            `[data-price-input="${product.id}-${nextColIndex}"]`,
-                                          ) as HTMLInputElement;
-                                        if (nextInput) {
-                                          nextInput.focus();
-                                          nextInput.select();
-                                        }
-                                      }, 50);
-                                    } else {
-                                      // Move to first column of next row
-                                      const currentRowIndex =
-                                        paginatedProducts.findIndex(
-                                          (p) => p.id === product.id,
-                                        );
-                                      if (
-                                        currentRowIndex <
-                                        paginatedProducts.length - 1
-                                      ) {
-                                        const nextProduct =
-                                          paginatedProducts[
-                                            currentRowIndex + 1
-                                          ];
-                                        setTimeout(() => {
-                                          const nextInput =
-                                            document.querySelector(
-                                              `[data-price-input="${nextProduct.id}-0"]`,
-                                            ) as HTMLInputElement;
-                                          if (nextInput) {
-                                            nextInput.focus();
-                                            nextInput.select();
-                                          }
-                                        }, 50);
-                                      }
-                                    }
-                                  }
-                                }}
-                                className="text-right w-full"
-                                min="0"
-                                step="1000"
-                                disabled={!canEdit}
-                                title={
-                                  !canEdit
-                                    ? "Chỉ admin mới có quyền sửa giá cho bảng giá áp dụng nhiều cửa hàng"
-                                    : ""
-                                }
-                              />
-                            </TableCell>
-                          );
-                        })}
-                        <TableCell className="text-center">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={async (e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-
-                              if (selectedPriceLists.length === 0) {
-                                toast({
-                                  title: "Lỗi",
-                                  description: "Vui lòng chọn bảng giá",
-                                  variant: "destructive",
-                                });
-                                return;
-                              }
-
-                              if (
-                                deleteProductFromPriceListMutation.isPending
-                              ) {
-                                return;
-                              }
-
-                              try {
-                                let successCount = 0;
-                                for (const priceListId of selectedPriceLists) {
-                                  await deleteProductFromPriceListMutation.mutateAsync(
-                                    {
-                                      priceListId,
-                                      productId: product.id,
-                                    },
-                                  );
-                                  successCount++;
-                                }
-
-                                await queryClient.refetchQueries({
-                                  queryKey: [
-                                    "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items",
-                                    selectedPriceLists,
-                                  ],
-                                  exact: true,
-                                });
-
-                                toast({
-                                  title: "Thành công",
-                                  description: `Đã xóa sản phẩm khỏi ${successCount} bảng giá`,
-                                });
-                              } catch (error) {
-                                console.error(
-                                  "Error deleting product from price list:",
-                                  error,
-                                );
-                                toast({
-                                  title: "Lỗi",
-                                  description:
-                                    error instanceof Error
-                                      ? error.message
-                                      : "Không thể xóa sản phẩm",
-                                  variant: "destructive",
-                                });
-                              }
-                            }}
-                            className="h-8 w-8 p-0 hover:bg-red-50"
-                            disabled={
-                              deleteProductFromPriceListMutation.isPending ||
-                              (!isAdmin &&
-                                selectedPriceLists.some((plId) => {
-                                  const pl = priceLists.find(
-                                    (p: PriceList) => p.id === plId,
-                                  );
-                                  return (
-                                    pl?.storeCode &&
-                                    pl.storeCode
-                                      .split(",")
-                                      .filter((s: string) => s.trim()).length >
-                                      1
-                                  );
-                                }))
-                            }
-                            title={
-                              !isAdmin &&
-                              selectedPriceLists.some((plId) => {
-                                const pl = priceLists.find(
-                                  (p: PriceList) => p.id === plId,
-                                );
-                                return (
-                                  pl?.storeCode &&
-                                  pl.storeCode
-                                    .split(",")
-                                    .filter((s: string) => s.trim()).length > 1
-                                );
-                              })
-                                ? "Chỉ admin mới có quyền xóa sản phẩm khỏi bảng giá nhiều chi nhánh"
-                                : ""
-                            }
+            <div className="flex-1 overflow-hidden border-2 border-gray-300 rounded-lg shadow-sm">
+              <div className="overflow-x-auto">
+                <div className="inline-block min-w-full align-middle">
+                  <div className="overflow-hidden">
+                    <table className="min-w-full divide-y-2 divide-gray-300">
+                      <thead className="bg-gradient-to-r from-gray-100 to-gray-50 sticky top-0 z-20 border-b-2 border-gray-300">
+                        <tr>
+                          <th
+                            scope="col"
+                            className="sticky left-0 z-30 bg-gradient-to-r from-gray-100 to-gray-50 px-2 py-4 text-left text-sm font-bold text-gray-700 tracking-wider min-w-[120px] w-[120px] border-r-2 border-gray-300 shadow-sm whitespace-normal leading-tight"
                           >
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                            {t("settings.productCode")}
+                          </th>
+                          <th
+                            scope="col"
+                            className="sticky left-[120px] z-30 bg-gradient-to-r from-gray-100 to-gray-50 px-2 py-4 text-left text-sm font-bold text-gray-700 tracking-wider min-w-[250px] w-[250px] border-r-2 border-gray-400 shadow-sm whitespace-normal leading-tight"
+                          >
+                            {t("settings.productName")}
+                          </th>
+                          {selectedPriceLists.map((priceListId, index) => {
+                            const priceList = priceLists.find(
+                              (pl: PriceList) => pl.id === priceListId,
+                            );
+                            return (
+                              <th
+                                key={priceListId}
+                                scope="col"
+                                className={`z-10 px-4 py-4 text-center text-xs font-bold uppercase tracking-wider min-w-[200px] w-[200px] border-r border-gray-300 ${
+                                  index % 2 === 0
+                                    ? "bg-blue-100"
+                                    : "bg-indigo-100"
+                                } text-gray-800`}
+                              >
+                                <div
+                                  className="font-semibold"
+                                  title={priceList?.name}
+                                >
+                                  {priceList?.name || t("settings.priceLists")}
+                                </div>
+                              </th>
+                            );
+                          })}
+                          <th
+                            scope="col"
+                            className="sticky right-0 z-30 bg-gradient-to-r from-gray-100 to-gray-50 px-4 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[120px] w-[120px] border-l-2 border-gray-400 shadow-sm"
+                          >
+                            {t("common.actions")}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {selectedPriceLists.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={3 + selectedPriceLists.length}
+                              className="px-4 py-8 text-center text-gray-500"
+                            >
+                              {t("settings.selectPriceListFirst")}
+                            </td>
+                          </tr>
+                        ) : paginatedProducts.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={3 + selectedPriceLists.length}
+                              className="px-4 py-8 text-center text-gray-500"
+                            >
+                              {t("settings.noProductsInPriceList")}
+                            </td>
+                          </tr>
+                        ) : (
+                          paginatedProducts.map((product, rowIndex) => (
+                            <TableRow
+                              key={product.id}
+                              className={`hover:bg-blue-50 transition-colors ${
+                                rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
+                              }`}
+                            >
+                              <td
+                                className={`sticky left-0 z-10 px-2 py-3 whitespace-nowrap text-xs font-mono font-semibold border-r-2 border-gray-300 min-w-[120px] w-[120px] ${
+                                  rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                }`}
+                              >
+                                {product.sku}
+                              </td>
+                              <td
+                                className={`sticky left-[120px] z-10 px-2 py-3 text-sm border-r-2 border-gray-400 min-w-[200px] w-[200px] ${
+                                  rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                }`}
+                              >
+                                <div
+                                  className="break-words font-medium text-xs leading-tight line-clamp-2"
+                                  title={product.name}
+                                >
+                                  {product.name}
+                                </div>
+                              </td>
+                              {selectedPriceLists.map(
+                                (priceListId, colIndex) => {
+                                  const key = `${priceListId}-${product.id}`;
+                                  const editingValue = editingPrices[key];
+                                  const currentValue =
+                                    editingValue !== undefined
+                                      ? editingValue
+                                      : product.prices[priceListId] || "";
+
+                                  // Find the price list to check store count
+                                  const priceList = priceLists.find(
+                                    (pl: PriceList) => pl.id === priceListId,
+                                  );
+                                  const storeCount = priceList?.storeCode
+                                    ? priceList.storeCode
+                                        .split(",")
+                                        .filter((s: string) => s.trim()).length
+                                    : 0;
+
+                                  // Allow editing only if admin OR price list is for single store
+                                  const canEdit = isAdmin || storeCount <= 1;
+
+                                  return (
+                                    <td
+                                      key={priceListId}
+                                      className={`z-0 px-4 py-2 whitespace-nowrap border-r border-gray-300 ${
+                                        colIndex % 2 === 0
+                                          ? "bg-blue-50"
+                                          : "bg-indigo-50"
+                                      }`}
+                                    >
+                                      <Input
+                                        type="number"
+                                        value={currentValue}
+                                        data-price-input={`${product.id}-${colIndex}`}
+                                        onChange={(e) =>
+                                          handlePriceInputChange(
+                                            priceListId,
+                                            product.id,
+                                            e.target.value,
+                                          )
+                                        }
+                                        onBlur={(e) =>
+                                          handlePriceSave(
+                                            priceListId,
+                                            product.id,
+                                            e.target.value,
+                                          )
+                                        }
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") {
+                                            e.preventDefault();
+
+                                            // Save current value
+                                            handlePriceSave(
+                                              priceListId,
+                                              product.id,
+                                              e.currentTarget.value,
+                                            );
+
+                                            // Move to next cell
+                                            const nextColIndex = colIndex + 1;
+                                            if (
+                                              nextColIndex <
+                                              selectedPriceLists.length
+                                            ) {
+                                              // Move to next column in same row
+                                              setTimeout(() => {
+                                                const nextInput =
+                                                  document.querySelector(
+                                                    `[data-price-input="${product.id}-${nextColIndex}"]`,
+                                                  ) as HTMLInputElement;
+                                                if (nextInput) {
+                                                  nextInput.focus();
+                                                  nextInput.select();
+                                                }
+                                              }, 50);
+                                            } else {
+                                              // Move to first column of next row
+                                              const currentRowIndex =
+                                                paginatedProducts.findIndex(
+                                                  (p) => p.id === product.id,
+                                                );
+                                              if (
+                                                currentRowIndex <
+                                                paginatedProducts.length - 1
+                                              ) {
+                                                const nextProduct =
+                                                  paginatedProducts[
+                                                    currentRowIndex + 1
+                                                  ];
+                                                setTimeout(() => {
+                                                  const nextInput =
+                                                    document.querySelector(
+                                                      `[data-price-input="${nextProduct.id}-0"]`,
+                                                    ) as HTMLInputElement;
+                                                  if (nextInput) {
+                                                    nextInput.focus();
+                                                    nextInput.select();
+                                                  }
+                                                }, 50);
+                                              }
+                                            }
+                                          }
+                                        }}
+                                        className="text-right w-full"
+                                        min="0"
+                                        step="1000"
+                                        disabled={!canEdit}
+                                        title={
+                                          !canEdit
+                                            ? "Chỉ admin mới có quyền sửa giá cho bảng giá áp dụng nhiều cửa hàng"
+                                            : ""
+                                        }
+                                      />
+                                    </td>
+                                  );
+                                },
+                              )}
+                              <td
+                                className={`sticky right-0 z-10 px-4 py-3 whitespace-nowrap text-center border-l-2 border-gray-400 w-56 ${
+                                  rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                }`}
+                              >
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={async (e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+
+                                    if (selectedPriceLists.length === 0) {
+                                      toast({
+                                        title: "Lỗi",
+                                        description: "Vui lòng chọn bảng giá",
+                                        variant: "destructive",
+                                      });
+                                      return;
+                                    }
+
+                                    if (
+                                      deleteProductFromPriceListMutation.isPending
+                                    ) {
+                                      return;
+                                    }
+
+                                    try {
+                                      let successCount = 0;
+                                      for (const priceListId of selectedPriceLists) {
+                                        await deleteProductFromPriceListMutation.mutateAsync(
+                                          {
+                                            priceListId,
+                                            productId: product.id,
+                                          },
+                                        );
+                                        successCount++;
+                                      }
+
+                                      await queryClient.refetchQueries({
+                                        queryKey: [
+                                          "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items",
+                                          selectedPriceLists,
+                                        ],
+                                        exact: true,
+                                      });
+
+                                      toast({
+                                        title: "Thành công",
+                                        description: `Đã xóa sản phẩm khỏi ${successCount} bảng giá`,
+                                      });
+                                    } catch (error) {
+                                      console.error(
+                                        "Error deleting product from price list:",
+                                        error,
+                                      );
+                                      toast({
+                                        title: "Lỗi",
+                                        description:
+                                          error instanceof Error
+                                            ? error.message
+                                            : "Không thể xóa sản phẩm",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }}
+                                  className="h-8 w-8 p-0 hover:bg-red-50"
+                                  disabled={
+                                    deleteProductFromPriceListMutation.isPending ||
+                                    (!isAdmin &&
+                                      selectedPriceLists.some((plId) => {
+                                        const pl = priceLists.find(
+                                          (p: PriceList) => p.id === plId,
+                                        );
+                                        return (
+                                          pl?.storeCode &&
+                                          pl.storeCode
+                                            .split(",")
+                                            .filter((s: string) => s.trim())
+                                            .length > 1
+                                        );
+                                      }))
+                                  }
+                                  title={
+                                    !isAdmin &&
+                                    selectedPriceLists.some((plId) => {
+                                      const pl = priceLists.find(
+                                        (p: PriceList) => p.id === plId,
+                                      );
+                                      return (
+                                        pl?.storeCode &&
+                                        pl.storeCode
+                                          .split(",")
+                                          .filter((s: string) => s.trim())
+                                          .length > 1
+                                      );
+                                    })
+                                      ? "Chỉ admin mới có quyền xóa sản phẩm khỏi bảng giá nhiều chi nhánh"
+                                      : ""
+                                  }
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-500" />
+                                </Button>
+                              </td>
+                            </TableRow>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Footer with Pagination */}
