@@ -226,7 +226,9 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
     if (!ordersData?.orders)
       return { todaySales: 0, orders: 0, totalRevenue: 0, netRevenue: 0 };
 
-    const orders = ordersData.orders;
+    const orders = ordersData.orders.filter(
+      (order: any) => order.status === "paid" || order.status === "completed",
+    );
     const todaySales = orders.reduce(
       (sum: number, order: any) => sum + parseFloat(order.total || 0),
       0,
