@@ -4,6 +4,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
   ko: {
     loading: "로딩 중...",
     sku: "SKU",
+    transactionDate: "거래 날짜",
     confirmCancelOrderMessage: "주문을 취소하시겠습니까?",
     confirmCancelOrder: "주문 취소 확인",
     confirmCancel: "취소 확인",
@@ -636,7 +637,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     // Spending thresholds
     editSpendingThreshold: "멤버십 등급 기준 수정",
     saveSpendingThreshold: "멤버십 등급 기준 저장",
-    
+
     // Store filter
     storeFilterLabel: "매장:",
     storeLabel: "매장",
@@ -687,6 +688,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
   en: {
     save: "Save",
     cancel: "Cancel",
+    transactionDate: "Transaction Date",
     confirmCancelOrderMessage: "Are you sure you want to cancel this order?",
     confirmCancelOrder: "Confirm Cancel Order",
     confirmCancel: "Confirm Cancel",
@@ -1223,7 +1225,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     // Spending thresholds
     editSpendingThreshold: "Edit Membership Thresholds",
     saveSpendingThreshold: "Save Membership Thresholds",
-    
+
     // Store filter
     storeFilterLabel: "Store:",
     storeLabel: "Store",
@@ -1269,6 +1271,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     save: "Lưu",
     sku: "SKU",
     shop: "Cửa hàng",
+    transactionDate: "Ngày chứng từ",
     stock: "Tồn kho",
     confirmCancelOrderMessage: "Bạn có chắc chắn muốn hủy đơn hàng này?",
     confirmCancelOrder: "Xác nhận hủy đơn hàng",
@@ -1782,7 +1785,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     // Spending thresholds
     editSpendingThreshold: "Sửa mức chi tiêu nâng hạng",
     saveSpendingThreshold: "Lưu mức chi tiêu nâng hạng",
-    
+
     // Store filter
     storeFilterLabel: "Cửa hàng:",
     storeLabel: "Cửa hàng",

@@ -55,6 +55,26 @@ export function StoreSettingsContent() {
     priceIncludesTax: false,
   });
 
+  // Generate next store code
+  const getNextStoreCode = () => {
+    if (!stores || stores.length === 0) {
+      return "CH-0001";
+    }
+    
+    // Find the highest code number
+    const maxCode = stores.reduce((max, store) => {
+      const match = store.storeCode.match(/CH-(\d+)/);
+      if (match) {
+        const num = parseInt(match[1]);
+        return num > max ? num : max;
+      }
+      return max;
+    }, 0);
+    
+    const nextNum = maxCode + 1;
+    return `CH-${nextNum.toString().padStart(4, '0')}`;
+  };
+
   // Fetch current store settings to check isAdmin
   const { data: storeSettings } = useQuery({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings"],
@@ -170,9 +190,10 @@ export function StoreSettingsContent() {
       });
     } else {
       setEditingStore(null);
+      const nextCode = getNextStoreCode();
       setFormData({
         storeName: "",
-        storeCode: "",
+        storeCode: nextCode,
         address: "",
         phone: "",
         email: "",
@@ -427,9 +448,15 @@ export function StoreSettingsContent() {
                 <Input
                   id="storeCode"
                   value={formData.storeCode}
-                  onChange={(e) => setFormData({ ...formData, storeCode: e.target.value })}
-                  placeholder="Nhập mã cửa hàng"
+                  disabled
+                  className="bg-gray-50 cursor-not-allowed"
+                  placeholder="Tự động tạo"
                 />
+                {!editingStore && (
+                  <p className="text-xs text-gray-500">
+                    Mã sẽ tự động tạo: {formData.storeCode}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="address">Địa chỉ</Label>

@@ -49,6 +49,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import SalesOrders from "@/pages/sales-orders";
 import PurchasesPage from "@/pages/purchases";
 import CashBookPage from "@/pages/cash-book";
@@ -141,6 +147,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
     "store" | "users" | "einvoice" | "printer" | "payment" | "general"
   >("store");
   const [storeFilter, setStoreFilter] = useState<string>("all");
+  const [quickRange, setQuickRange] = useState<string>("");
 
   // Date range state
   const today = new Date();
@@ -269,8 +276,8 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
 
       const dayRevenue = ordersData.orders
         .filter((order: any) => {
-          if (!order.orderedAt) return false;
-          const orderDate = order.orderedAt.split("T")[0];
+          if (!order.updatedAt) return false;
+          const orderDate = order.updatedAt.split("T")[0];
           return orderDate === dateStr;
         })
         .reduce(
@@ -534,7 +541,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
               {/* Store Filter and Date Range */}
               <Card className="bg-white shadow-sm">
                 <CardContent className="pt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="flex flex-col gap-2">
                       <label className="text-sm font-medium">
                         {t("reports.storeFilter")}
@@ -556,6 +563,58 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                             </option>
                           ))}
                       </select>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-medium text-gray-700">
+                        Khoảng thời gian
+                      </label>
+                      <Select
+                        value={quickRange}
+                        onValueChange={(value) => {
+                          setQuickRange(value);
+                          const today = new Date();
+                          let start = new Date();
+                          let end = new Date();
+
+                          if (value === "today") {
+                            start = today;
+                            end = today;
+                          } else if (value === "thisWeek") {
+                            const dayOfWeek = today.getDay();
+                            const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                            start = new Date(today);
+                            start.setDate(today.getDate() + diff);
+                            end = today;
+                          } else if (value === "lastWeek") {
+                            const dayOfWeek = today.getDay();
+                            const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                            start = new Date(today);
+                            start.setDate(today.getDate() + diff - 7);
+                            end = new Date(start);
+                            end.setDate(start.getDate() + 6);
+                          } else if (value === "lastMonth") {
+                            start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                            end = new Date(today.getFullYear(), today.getMonth(), 0);
+                          }
+
+                          if (value) {
+                            const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+                            const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;
+                            setStartDate(startStr);
+                            setEndDate(endStr);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-10 border-gray-300 hover:border-green-400 focus:border-green-500 focus:ring-green-500">
+                          <SelectValue placeholder="Chọn nhanh" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="today">Hôm nay</SelectItem>
+                          <SelectItem value="thisWeek">Tuần này</SelectItem>
+                          <SelectItem value="lastWeek">Tuần trước</SelectItem>
+                          <SelectItem value="lastMonth">Tháng trước</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="flex flex-col gap-2">
                       <label className="text-sm font-medium">
@@ -638,187 +697,43 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
 
               {/* Revenue Chart */}
               <Card className="bg-white shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg font-semibold">
-                      {t("reports.dailySalesChart")}
-                    </CardTitle>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={
-                        startDate === endDate && startDate === todayStr
-                          ? "today"
-                          : startDate === endDate
-                            ? "custom"
-                            : (() => {
-                                const today = new Date();
-                                const start = new Date(startDate);
-                                const end = new Date(endDate);
-
-                                // Check if it's this week
-                                const startOfWeek = new Date(today);
-                                startOfWeek.setDate(
-                                  today.getDate() - today.getDay(),
-                                );
-                                const endOfWeek = new Date(startOfWeek);
-                                endOfWeek.setDate(startOfWeek.getDate() + 6);
-
-                                if (
-                                  start.toDateString() ===
-                                    startOfWeek.toDateString() &&
-                                  end.toDateString() ===
-                                    endOfWeek.toDateString()
-                                ) {
-                                  return "thisWeek";
-                                }
-
-                                // Check if it's last week
-                                const startOfLastWeek = new Date(startOfWeek);
-                                startOfLastWeek.setDate(
-                                  startOfWeek.getDate() - 7,
-                                );
-                                const endOfLastWeek = new Date(startOfLastWeek);
-                                endOfLastWeek.setDate(
-                                  startOfLastWeek.getDate() + 6,
-                                );
-
-                                if (
-                                  start.toDateString() ===
-                                    startOfLastWeek.toDateString() &&
-                                  end.toDateString() ===
-                                    endOfLastWeek.toDateString()
-                                ) {
-                                  return "lastWeek";
-                                }
-
-                                // Check if it's this month
-                                const startOfMonth = new Date(
-                                  today.getFullYear(),
-                                  today.getMonth(),
-                                  1,
-                                );
-                                const endOfMonth = new Date(
-                                  today.getFullYear(),
-                                  today.getMonth() + 1,
-                                  0,
-                                );
-
-                                if (
-                                  start.toDateString() ===
-                                    startOfMonth.toDateString() &&
-                                  end.toDateString() ===
-                                    endOfMonth.toDateString()
-                                ) {
-                                  return "thisMonth";
-                                }
-
-                                return "custom";
-                              })()
-                      }
-                      onValueChange={(value) => {
-                        const today = new Date();
-                        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-
-                        switch (value) {
-                          case "today":
-                            setStartDate(todayStr);
-                            setEndDate(todayStr);
-                            break;
-                          case "thisWeek": {
-                            const startOfWeek = new Date(today);
-                            startOfWeek.setDate(
-                              today.getDate() - today.getDay(),
-                            );
-                            const endOfWeek = new Date(startOfWeek);
-                            endOfWeek.setDate(startOfWeek.getDate() + 6);
-                            setStartDate(
-                              `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, "0")}-${String(startOfWeek.getDate()).padStart(2, "0")}`,
-                            );
-                            setEndDate(
-                              `${endOfWeek.getFullYear()}-${String(endOfWeek.getMonth() + 1).padStart(2, "0")}-${String(endOfWeek.getDate()).padStart(2, "0")}`,
-                            );
-                            break;
-                          }
-                          case "lastWeek": {
-                            const startOfWeek = new Date(today);
-                            startOfWeek.setDate(
-                              today.getDate() - today.getDay() - 7,
-                            );
-                            const endOfWeek = new Date(startOfWeek);
-                            endOfWeek.setDate(startOfWeek.getDate() + 6);
-                            setStartDate(
-                              `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, "0")}-${String(startOfWeek.getDate()).padStart(2, "0")}`,
-                            );
-                            setEndDate(
-                              `${endOfWeek.getFullYear()}-${String(endOfWeek.getMonth() + 1).padStart(2, "0")}-${String(endOfWeek.getDate()).padStart(2, "0")}`,
-                            );
-                            break;
-                          }
-                          case "thisMonth": {
-                            const startOfMonth = new Date(
-                              today.getFullYear(),
-                              today.getMonth(),
-                              1,
-                            );
-                            const endOfMonth = new Date(
-                              today.getFullYear(),
-                              today.getMonth() + 1,
-                              0,
-                            );
-                            setStartDate(
-                              `${startOfMonth.getFullYear()}-${String(startOfMonth.getMonth() + 1).padStart(2, "0")}-${String(startOfMonth.getDate()).padStart(2, "0")}`,
-                            );
-                            setEndDate(
-                              `${endOfMonth.getFullYear()}-${String(endOfMonth.getMonth() + 1).padStart(2, "0")}-${String(endOfMonth.getDate()).padStart(2, "0")}`,
-                            );
-                            break;
-                          }
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="w-40">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="today">
-                          {t("reports.toDay")}
-                        </SelectItem>
-                        <SelectItem value="thisWeek">
-                          {t("reports.thisWeek")}
-                        </SelectItem>
-                        <SelectItem value="lastWeek">
-                          {t("reports.lastWeek")}
-                        </SelectItem>
-                        <SelectItem value="thisMonth">
-                          {t("reports.thisMonth")}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold">
+                    {t("reports.dailySalesChart")}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {/* Enhanced Bar Chart */}
-                  <div className="h-80 flex items-end justify-start gap-2 px-4 overflow-x-auto pb-8">
+                  {/* Bar Chart with proper X/Y axes */}
+                  <TooltipProvider>
+                  <div className="relative h-96 bg-gray-50 rounded-lg p-6">
                     {(() => {
                       // Generate all dates in the selected range
                       const start = new Date(startDate);
                       const end = new Date(endDate);
                       const dateArray: any[] = [];
 
+                      // Loop through each day in the range
                       for (
                         let dt = new Date(start);
                         dt <= end;
                         dt.setDate(dt.getDate() + 1)
                       ) {
                         const dateStr = dt.toISOString().split("T")[0];
-                        const existingData = dailyRevenue.find(
-                          (d: any) => d.date === dateStr,
-                        );
 
+                        // Find revenue and order count for this date from ordersData - CHECK BY updatedAt
+                        const dayOrders = ordersData?.orders?.filter((order: any) => {
+                          if (!order.updatedAt) return false;
+                          const orderDate = order.updatedAt.split("T")[0];
+                          return orderDate === dateStr && (order.status === "paid" || order.status === "completed");
+                        }) || [];
+
+                        const dayRevenue = dayOrders.reduce((sum: number, order: any) => sum + parseFloat(order.total || 0), 0);
+
+                        // Always add ALL dates to array, even if revenue is 0
                         dateArray.push({
                           date: dateStr,
-                          revenue: existingData ? existingData.revenue : 0,
+                          revenue: dayRevenue,
+                          orderCount: dayOrders.length,
                           day: dt.getDate(),
                           month: dt.getMonth() + 1,
                           year: dt.getFullYear(),
@@ -835,98 +750,121 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
 
                       const maxRevenue = Math.max(
                         ...dateArray.map((d: any) => d.revenue),
-                        1,
+                        100000, // Minimum scale
                       );
 
-                      return dateArray.map((day: any, index: number) => {
-                        const heightPercent = (day.revenue / maxRevenue) * 100;
-                        const hasData = day.revenue > 0;
+                      // Calculate Y-axis labels (5 levels)
+                      const yAxisSteps = 5;
+                      const yAxisLabels = [];
+                      for (let i = 0; i <= yAxisSteps; i++) {
+                        const value = (maxRevenue / yAxisSteps) * i;
+                        yAxisLabels.push(value);
+                      }
 
-                        return (
-                          <div
-                            key={index}
-                            className="flex flex-col items-center group relative"
-                            style={{
-                              minWidth: dateArray.length > 31 ? "24px" : "40px",
-                              flex: dateArray.length <= 7 ? "1" : "0 0 auto",
-                            }}
-                          >
-                            {/* Bar */}
-                            <div
-                              className={`w-full rounded-t-lg transition-all duration-300 ${
-                                hasData
-                                  ? "bg-gradient-to-t from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 shadow-lg"
-                                  : "bg-gray-200 hover:bg-gray-300"
-                              } cursor-pointer relative`}
-                              style={{
-                                height: hasData
-                                  ? `${Math.max(heightPercent, 5)}%`
-                                  : "8px",
-                                minHeight: "8px",
-                              }}
-                            >
-                              {/* Animated highlight on hover */}
-                              {hasData && (
-                                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 rounded-t-lg transition-opacity duration-300"></div>
-                              )}
-                            </div>
-
-                            {/* Date label */}
-                            <div className="mt-2 text-center">
-                              <span
-                                className={`text-xs font-medium ${hasData ? "text-gray-700" : "text-gray-400"}`}
-                              >
-                                {day.day}
-                              </span>
-                              {dateArray.length <= 7 && (
-                                <div className="text-[10px] text-gray-500">
-                                  Th{day.month}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Enhanced Tooltip */}
-                            <div className="absolute bottom-full mb-3 left-1/2 transform -translate-x-1/2 hidden group-hover:block bg-gradient-to-br from-gray-900 to-gray-800 text-white text-sm rounded-xl px-5 py-4 whitespace-nowrap z-50 shadow-2xl border border-gray-600 min-w-[200px]">
-                              <div className="font-bold mb-2 text-blue-300 text-base">
-                                {day.day}/{day.month}/{day.year}
+                      return (
+                        <div className="flex h-full">
+                          {/* Y-axis */}
+                          <div className="flex flex-col justify-between pr-3 border-r border-gray-300 w-32">
+                            {yAxisLabels.reverse().map((label, i) => (
+                              <div key={i} className="text-xs text-gray-600 text-right">
+                                {label.toLocaleString("vi-VN")}
                               </div>
-                              <div className="space-y-1">
-                                <div className="flex justify-between items-center gap-3">
-                                  <span className="text-gray-300">
-                                    {t("reports.sales")}:
-                                  </span>
-                                  <span className="font-bold text-green-400">
-                                    {day.revenue.toLocaleString("vi-VN")} ₫
-                                  </span>
-                                </div>
-                                {!hasData && (
-                                  <div className="text-xs text-gray-400 italic mt-2">
-                                    {t("reports.noSalesData")}
-                                  </div>
-                                )}
-                              </div>
-                              {/* Arrow */}
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-px">
-                                <div className="border-[6px] border-transparent border-t-gray-800"></div>
-                              </div>
-                            </div>
+                            ))}
                           </div>
-                        );
-                      });
+
+                          {/* Chart area */}
+                          <div className="flex-1 pl-4 flex items-end justify-start gap-2 overflow-x-auto pb-8 border-b border-gray-300">
+                            {dateArray.map((day: any, index: number) => {
+                              const heightPercent = maxRevenue > 0 ? (day.revenue / maxRevenue) * 100 : 0;
+                              const hasData = day.revenue > 0;
+
+                              return (
+                                <Tooltip key={index}>
+                                  <TooltipTrigger asChild>
+                                    <div
+                                      className="flex flex-col items-center group relative cursor-pointer"
+                                      style={{
+                                        minWidth: dateArray.length > 31 ? "28px" : dateArray.length > 14 ? "40px" : "56px",
+                                        flex: dateArray.length <= 7 ? "1" : "0 0 auto",
+                                        height: "100%",
+                                      }}
+                                    >
+                                      {/* Bar container */}
+                                      <div className="flex-1 w-full flex flex-col justify-end">
+                                        {/* Revenue amount on top */}
+                                        {hasData && (
+                                          <div className="mb-1 text-center">
+                                            <span className="text-xs font-semibold text-emerald-600">
+                                              {day.revenue.toLocaleString("vi-VN")}
+                                            </span>
+                                          </div>
+                                        )}
+
+                                        {/* Bar */}
+                                        <div
+                                          className={`w-full rounded-t transition-all duration-300 ${
+                                            hasData
+                                              ? "bg-emerald-500 group-hover:bg-emerald-600"
+                                              : "bg-gray-300"
+                                          }`}
+                                          style={{
+                                            height: hasData ? `${Math.max(heightPercent, 5)}%` : "4px",
+                                          }}
+                                        />
+                                      </div>
+
+                                      {/* Date label (X-axis) */}
+                                      <div className="mt-2 text-center">
+                                        <span className={`text-xs font-medium ${
+                                          hasData ? "text-gray-700" : "text-gray-400"
+                                        }`}>
+                                          {day.day}/{day.month}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="bg-white border-gray-200 shadow-xl">
+                                    <div className="space-y-2">
+                                      <div className="font-semibold text-sm border-b pb-1">
+                                        {day.day}/{day.month}/{day.year}
+                                      </div>
+                                      <div className="space-y-1 text-xs">
+                                        <div className="flex justify-between gap-4">
+                                          <span className="text-gray-600">{t("reports.revenueLabel")}:</span>
+                                          <span className="font-bold text-emerald-600">
+                                            {day.revenue.toLocaleString("vi-VN")} ₫
+                                          </span>
+                                        </div>
+                                        <div className="flex justify-between gap-4">
+                                          <span className="text-gray-600">{t("reports.ordersLabel")}:</span>
+                                          <span className="font-semibold text-gray-900">
+                                            {day.orderCount}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
                     })()}
                   </div>
+                  </TooltipProvider>
 
                   {/* Legend with stats */}
                   <div className="flex justify-between items-center mt-6 pt-4 border-t">
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-gradient-to-t from-blue-600 to-blue-400 rounded"></div>
+                        <div className="w-4 h-4 bg-emerald-500 rounded"></div>
                         <span className="text-sm text-gray-600">
                           {t("reports.salesRevenue")}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                        <div className="w-4 h-4 bg-gray-300 rounded"></div>
                         <span className="text-sm text-gray-600">
                           {t("reports.noSalesData")}
                         </span>
@@ -934,10 +872,26 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                     </div>
                     <div className="text-sm text-gray-500">
                       {t("reports.total")}:{" "}
-                      <span className="font-bold text-blue-600">
-                        {dailyRevenue
-                          .reduce((sum: number, d: any) => sum + d.revenue, 0)
-                          .toLocaleString("vi-VN")}{" "}
+                      <span className="font-bold text-emerald-600">
+                        {(() => {
+                          const start = new Date(startDate);
+                          const end = new Date(endDate);
+                          let totalRevenue = 0;
+
+                          for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
+                            const dateStr = dt.toISOString().split("T")[0];
+                            const dayRevenue = ordersData?.orders
+                              ?.filter((order: any) => {
+                                if (!order.updatedAt && !order.createdAt) return false;
+                                const orderDate = (order.updatedAt || order.createdAt).split("T")[0];
+                                return orderDate === dateStr && (order.status === "paid" || order.status === "completed");
+                              })
+                              .reduce((sum: number, order: any) => sum + parseFloat(order.total || 0), 0) || 0;
+                            totalRevenue += dayRevenue;
+                          }
+
+                          return totalRevenue.toLocaleString("vi-VN");
+                        })()}{" "}
                         ₫
                       </span>
                     </div>

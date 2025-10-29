@@ -281,8 +281,17 @@ export default function SalesOrders() {
   const urlParams = new URLSearchParams(window.location.search);
   const orderParam = urlParams.get("order");
 
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  // Get today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const [startDate, setStartDate] = useState(getTodayDate());
+  const [endDate, setEndDate] = useState(getTodayDate());
   const [customerSearch, setCustomerSearch] = useState("");
   const [orderNumberSearch, setOrderNumberSearch] = useState(orderParam || "");
   const [customerCodeSearch, setCustomerCodeSearch] = useState("");
@@ -290,6 +299,7 @@ export default function SalesOrders() {
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [einvoiceStatusFilter, setEinvoiceStatusFilter] = useState("all");
   const [storeCodeFilter, setStoreCodeFilter] = useState("all");
+  const [dateSearchType, setDateSearchType] = useState<"created" | "updated">("created"); // New state for date search type
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null); // Renamed to selectedItem for clarity
   const [isEditing, setIsEditing] = useState(false);
   const [editableInvoice, setEditableInvoice] = useState<Invoice | null>(null); // Renamed to editableItem
@@ -354,7 +364,9 @@ export default function SalesOrders() {
   // Auto-select first store if storeCodeFilter is "all" and there's only one store
   useEffect(() => {
     if (storesData && storesData.length > 0) {
-      const filteredStores = storesData.filter((store: any) => store.typeUser !== 1);
+      const filteredStores = storesData.filter(
+        (store: any) => store.typeUser !== 1,
+      );
       if (filteredStores.length === 1 && storeCodeFilter === "all") {
         setStoreCodeFilter(filteredStores[0].storeCode);
       }
@@ -380,13 +392,31 @@ export default function SalesOrders() {
       storeCodeFilter,
       currentPage,
       itemsPerPage,
+      dateSearchType, // Add dateSearchType to query key
     ],
     queryFn: async () => {
       try {
         const params = new URLSearchParams();
 
-        if (startDate) params.append("startDate", startDate);
-        if (endDate) params.append("endDate", endDate);
+        // Thêm điều kiện tìm kiếm theo ngày dựa trên lựa chọn của người dùng
+        if (startDate && endDate) {
+          if (dateSearchType === "updated") {
+            // Tìm theo ngày hủy/hoàn thành (updatedAt)
+            // Chỉ tìm các đơn đã hủy hoặc hoàn thành
+            params.append("updatedAtStart", startDate);
+            params.append("updatedAtEnd", endDate);
+            
+            // Nếu chưa chọn trạng thái cụ thể, mặc định chỉ lấy đơn hủy hoặc hoàn thành
+            if (orderStatusFilter === "all") {
+              params.append("statusIn", "paid,cancelled");
+            }
+          } else {
+            // Tìm theo ngày tạo đơn (createdAt) - mặc định
+            params.append("startDate", startDate);
+            params.append("endDate", endDate);
+          }
+        }
+
         if (customerSearch) params.append("customerName", customerSearch);
         if (orderNumberSearch) params.append("orderNumber", orderNumberSearch);
         if (customerCodeSearch)
@@ -427,10 +457,10 @@ export default function SalesOrders() {
         }
 
         const data = await response.json();
-        console.log("Sales Orders - Orders loaded with storeCode filter:", {
+        console.log("Sales Orders - Orders loaded with date filter by status:", {
           url: url,
           total: data?.orders?.length || 0,
-          hasStoreCodeFilter: true,
+          dateFilterType: orderStatusFilter === "paid" || orderStatusFilter === "cancelled" ? "updatedAt" : "createdAt",
         });
 
         return data;
@@ -440,13 +470,13 @@ export default function SalesOrders() {
       }
     },
     retry: 1,
-    retryDelay: 500,
+    retryDelay: 0,
     staleTime: 0,
     gcTime: 0,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-    refetchInterval: 2000, // Poll every 2 seconds for real-time updates
-    refetchIntervalInBackground: true, // Continue polling in background
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchInterval: 0, // Poll every 2 seconds for real-time updates
+    refetchIntervalInBackground: false, // Continue polling in background
   });
 
   const orders = ordersResponse?.orders || [];
@@ -811,14 +841,14 @@ export default function SalesOrders() {
     mutationFn: async (orderId: number) => {
       try {
         console.log(`🔄 Canceling order ${orderId} with status: cancelled`);
-        
+
         // Ensure we send the correct payload
         const payload = {
           status: "cancelled",
         };
-        
+
         console.log(`📤 Sending cancel order payload:`, payload);
-        
+
         const response = await apiRequest(
           "PUT",
           `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/${orderId}/status`,
@@ -2890,71 +2920,95 @@ export default function SalesOrders() {
               <CardTitle className="text-lg">{t("common.filters")}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Row 1: Date Search Type and Date Range */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                    <Calendar className="inline-block w-4 h-4 mr-1" />
+                    Tìm kiếm theo
+                  </label>
+                  <select
+                    value={dateSearchType}
+                    onChange={(e) => setDateSearchType(e.target.value as "created" | "updated")}
+                    className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 hover:border-green-400 transition-colors"
+                  >
+                    <option value="created">📅 Ngày tạo đơn</option>
+                    <option value="updated">✅ Ngày hủy/hoàn thành</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
                     {t("orders.startDate")}
                   </label>
                   <Input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
+                    className="h-10"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
                     {t("orders.endDate")}
                   </label>
                   <Input
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    {t("orders.customer")}
-                  </label>
-                  <Input
-                    placeholder={t("reports.customerFilterPlaceholder")}
-                    value={customerSearch}
-                    onChange={(e) => setCustomerSearch(e.target.value)}
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    {t("orders.productSearch")}
-                  </label>
-                  <Input
-                    placeholder={t("common.customerCodeSearchPlaceholder")}
-                    value={customerCodeSearch}
-                    onChange={(e) => setCustomerCodeSearch(e.target.value)}
-                    className="w-full"
+                    className="h-10"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+
+              {/* Row 2: Customer and Product Search */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                    <Search className="inline-block w-4 h-4 mr-1" />
                     {t("orders.orderNumber")}
                   </label>
                   <Input
                     placeholder={t("reports.orderNumberPlaceholder")}
                     value={orderNumberSearch}
                     onChange={(e) => setOrderNumberSearch(e.target.value)}
-                    className="w-full"
+                    className="w-full h-10"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                    {t("orders.customer")}
+                  </label>
+                  <Input
+                    placeholder={t("reports.customerFilterPlaceholder")}
+                    value={customerSearch}
+                    onChange={(e) => setCustomerSearch(e.target.value)}
+                    className="w-full h-10"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                    {t("orders.productSearch")}
+                  </label>
+                  <Input
+                    placeholder={t("common.customerCodeSearchPlaceholder")}
+                    value={customerCodeSearch}
+                    onChange={(e) => setCustomerCodeSearch(e.target.value)}
+                    className="w-full h-10"
+                  />
+                </div>
+              </div>
+
+              {/* Row 3: Status Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {storeSettings?.businessType !== "laundry" && (
                   <div>
-                    <label className="block text-sm font-medium mb-2">
+                    <label className="block text-sm font-medium mb-2 text-gray-700">
                       {t("orders.salesType")}
                     </label>
                     <select
                       value={salesChannelFilter}
                       onChange={(e) => setSalesChannelFilter(e.target.value)}
-                      className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 hover:border-green-400 transition-colors"
                     >
                       <option value="all">{t("common.all")}</option>
                       <option value="table">{t("orders.eatIn")}</option>
@@ -2965,13 +3019,13 @@ export default function SalesOrders() {
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
                     {t("orders.orderStatusFilter")}
                   </label>
                   <select
                     value={orderStatusFilter}
                     onChange={(e) => setOrderStatusFilter(e.target.value)}
-                    className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 hover:border-green-400 transition-colors"
                   >
                     <option value="all">{t("orders.allStatus")}</option>
                     <option value="paid">{t("orders.paidStatus")}</option>
@@ -2982,13 +3036,13 @@ export default function SalesOrders() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
                     {t("common.einvoiceStatusFilter")}
                   </label>
                   <select
                     value={einvoiceStatusFilter}
                     onChange={(e) => setEinvoiceStatusFilter(e.target.value)}
-                    className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 hover:border-green-400 transition-colors"
                   >
                     <option value="all">{t("common.allEinvoiceStatus")}</option>
                     <option value="0">
@@ -3000,13 +3054,13 @@ export default function SalesOrders() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
                     {t("orders.storeFilter")}
                   </label>
                   <select
                     value={storeCodeFilter}
                     onChange={(e) => setStoreCodeFilter(e.target.value)}
-                    className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 hover:border-green-400 transition-colors"
                   >
                     {storesData.filter((store: any) => store.typeUser !== 1)
                       .length > 1 && (
@@ -4422,7 +4476,8 @@ export default function SalesOrders() {
                                                                               editedOrderItems[
                                                                                 it
                                                                                   .id
-                                                                              ] || {};
+                                                                              ] ||
+                                                                              {};
                                                                             const itPrice =
                                                                               parseFloat(
                                                                                 editedIt.unitPrice !==

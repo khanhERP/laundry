@@ -397,6 +397,8 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
     yAxis: "Trục Y",
     legend: "Chú thích",
     dataPoints: "Điểm dữ liệu",
+    revenueLabel: "Doanh thu",
+    ordersLabel: "Số đơn bán",
 
     // Menu analysis
     productPerformance: "Hiệu suất sản phẩm",
@@ -976,6 +978,8 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
     yAxis: "Y축",
     legend: "범례",
     dataPoints: "데이터 포인트",
+    revenueLabel: "매출",
+    ordersLabel: "주문 수",
 
     // Menu analysis
     productPerformance: "제품 성과",
@@ -1559,6 +1563,8 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
     yAxis: "Y-Axis",
     legend: "Legend",
     dataPoints: "Data Points",
+    revenueLabel: "Revenue",
+    ordersLabel: "Orders",
 
     // Menu analysis
     productPerformance: "Product Performance",

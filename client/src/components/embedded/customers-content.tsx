@@ -56,12 +56,12 @@ export default function CustomersPageContent() {
 
   // Fetch store settings to get user's store info
   const { data: userStore } = useQuery({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings"],
+    queryKey: ["/api/store-settings"],
   });
 
   // Fetch store list for admin users
   const { data: storesData, isLoading: storesLoading } = useQuery({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list"],
+    queryKey: ["/api/store-settings/list"],
   });
 
   const isAdmin = userStore?.isAdmin || false;
@@ -73,7 +73,7 @@ export default function CustomersPageContent() {
     refetch: refetchCustomers,
   } = useQuery({
     queryKey: [
-      "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers",
+      "/api/customers",
       currentPage,
       pageSize,
       customerSearchTerm,
@@ -128,7 +128,7 @@ export default function CustomersPageContent() {
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
 
-      await queryClient.refetchQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/customers"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/customers"] });
       toast({
         title: t("common.success"),
         description: t("settings.customerDeleteSuccess"),
