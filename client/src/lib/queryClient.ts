@@ -53,7 +53,8 @@ export const getQueryFn: <T>(options: {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: defaultFetcher,
+      queryFn: defaultFetcher, // 👈 set mặc định ở đây
+      // queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: true,
       staleTime: 0, // No cache - always fetch fresh
