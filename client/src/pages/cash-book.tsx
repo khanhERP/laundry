@@ -77,6 +77,27 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
     return new Date().toISOString().split("T")[0];
   });
 
+  // Query general settings to determine date filter logic
+  const { data: generalSettings = [] } = useQuery({
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/general-settings"],
+    queryFn: async () => {
+      try {
+        const response = await fetch("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/general-settings");
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        return Array.isArray(data) ? data : [];
+      } catch (error) {
+        console.error("Error fetching general settings:", error);
+        return [];
+      }
+    },
+  });
+
+  // Check if ST-002 (ngày tạo đơn) is active
+  const useCreatedAtFilter = generalSettings.find(
+    (s: any) => s.settingCode === "ST-002" && s.isActive === true
+  );
+
   // Query orders (thu - income from sales)
   const { data: orders = [] } = useQuery({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders"],
@@ -252,7 +273,12 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
         return true;
       })
       .forEach((order) => {
-        const orderDate = new Date(order.orderedAt || order.paidAt);
+        // Use createdAt or updatedAt based on general settings
+        // ST-002: Use createdAt (ngày tạo đơn)
+        // ST-003 or default: Use updatedAt (ngày hoàn thành/hủy đơn)
+        const orderDate = useCreatedAtFilter 
+          ? new Date(order.createdAt || order.orderedAt)
+          : new Date(order.updatedAt || order.paidAt || order.orderedAt);
 
         // Calculate amount based on payment method filter
         let transactionAmount = parseFloat(order.total || "0");
@@ -279,7 +305,7 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
 
         transactions.push({
           id: order.orderNumber || `ORDER-${order.id}`, // Use actual order number
-          date: orderDate.toISOString().split("T")[0],
+          date: orderDate.toISOString().split("T")[0], // Using updatedAt (completion date)
           description:
             order.salesChannel === "table"
               ? "tableSalesTransaction"
@@ -1276,12 +1302,60 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                             </div>
                           </TableCell>
                           <TableCell className="w-[110px]">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                              <span className="text-sm">
-                                {formatDate(transaction.date)}
-                              </span>
-                            </div>
+                            {(() => {
+                              // Find the corresponding order/voucher to get creation date
+                              let creationDate = transaction.date; // Default to transaction date
+
+                              if (transaction.voucherType === "sales_order") {
+                                const order = orders.find(
+                                  (o: any) =>
+                                    o.orderNumber === transaction.id ||
+                                    `ORDER-${o.id}` === transaction.id ||
+                                    `ORD-${o.id}` === transaction.id,
+                                );
+                                // Use createdAt or orderedAt based on general settings
+                                creationDate = useCreatedAtFilter
+                                  ? (order?.createdAt || order?.orderedAt || transaction.date)
+                                  : (order?.orderedAt || order?.createdAt || transaction.date);
+                              } else if (
+                                transaction.voucherType === "purchase_receipt"
+                              ) {
+                                const receipt = purchaseReceipts.find(
+                                  (pr: any) =>
+                                    pr.receiptNumber === transaction.id ||
+                                    `PURCHASE-${pr.id}` === transaction.id,
+                                );
+                                // Use purchaseDate or createdAt for creation date
+                                creationDate = receipt?.purchaseDate || receipt?.createdAt || transaction.date;
+                              } else if (
+                                transaction.voucherType === "income_voucher"
+                              ) {
+                                const voucher = incomeVouchers.find(
+                                  (v: any) =>
+                                    v.voucherNumber === transaction.id,
+                                );
+                                // Use date field for vouchers
+                                creationDate = voucher?.date || transaction.date;
+                              } else if (
+                                transaction.voucherType === "expense_voucher"
+                              ) {
+                                const voucher = expenseVouchers.find(
+                                  (v: any) =>
+                                    v.voucherNumber === transaction.id,
+                                );
+                                // Use date field for vouchers
+                                creationDate = voucher?.date || transaction.date;
+                              }
+
+                              return (
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                  <span className="text-sm">
+                                    {formatDate(creationDate)}
+                                  </span>
+                                </div>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell className="w-[150px]">
                             {(() => {
@@ -1295,7 +1369,8 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                                     `ORDER-${o.id}` === transaction.id ||
                                     `ORD-${o.id}` === transaction.id,
                                 );
-                                updatedAt = order?.updatedAt;
+                                // Show updatedAt when using updatedAt filter, otherwise show createdAt
+                                updatedAt = useCreatedAtFilter ? order?.createdAt : order?.updatedAt;
                               } else if (
                                 transaction.voucherType === "purchase_receipt"
                               ) {
