@@ -277,8 +277,8 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
         // ST-002: Use createdAt (ngày tạo đơn)
         // ST-003 or default: Use updatedAt (ngày hoàn thành/hủy đơn)
         const orderDate = useCreatedAtFilter 
-          ? new Date(order.updatedAt)
-          : new Date(order.orderedAt);
+          ? new Date(order.createdAt || order.orderedAt)
+          : new Date(order.updatedAt || order.paidAt || order.orderedAt);
 
         // Calculate amount based on payment method filter
         let transactionAmount = parseFloat(order.total || "0");
