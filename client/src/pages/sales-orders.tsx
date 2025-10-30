@@ -299,7 +299,9 @@ export default function SalesOrders() {
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [einvoiceStatusFilter, setEinvoiceStatusFilter] = useState("all");
   const [storeCodeFilter, setStoreCodeFilter] = useState("all");
-  const [dateSearchType, setDateSearchType] = useState<"created" | "updated">("created"); // New state for date search type
+  const [dateSearchType, setDateSearchType] = useState<"created" | "updated">(
+    "created",
+  ); // New state for date search type
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null); // Renamed to selectedItem for clarity
   const [isEditing, setIsEditing] = useState(false);
   const [editableInvoice, setEditableInvoice] = useState<Invoice | null>(null); // Renamed to editableItem
@@ -405,7 +407,7 @@ export default function SalesOrders() {
             // Chỉ tìm các đơn đã hủy hoặc hoàn thành
             params.append("updatedAtStart", startDate);
             params.append("updatedAtEnd", endDate);
-            
+
             // Nếu chưa chọn trạng thái cụ thể, mặc định chỉ lấy đơn hủy hoặc hoàn thành
             if (orderStatusFilter === "all") {
               params.append("statusIn", "paid,cancelled, completed, pending");
@@ -457,11 +459,17 @@ export default function SalesOrders() {
         }
 
         const data = await response.json();
-        console.log("Sales Orders - Orders loaded with date filter by status:", {
-          url: url,
-          total: data?.orders?.length || 0,
-          dateFilterType: orderStatusFilter === "paid" || orderStatusFilter === "cancelled" ? "updatedAt" : "createdAt",
-        });
+        console.log(
+          "Sales Orders - Orders loaded with date filter by status:",
+          {
+            url: url,
+            total: data?.orders?.length || 0,
+            dateFilterType:
+              orderStatusFilter === "paid" || orderStatusFilter === "cancelled"
+                ? "updatedAt"
+                : "createdAt",
+          },
+        );
 
         return data;
       } catch (error) {
@@ -2929,7 +2937,9 @@ export default function SalesOrders() {
                   </label>
                   <select
                     value={dateSearchType}
-                    onChange={(e) => setDateSearchType(e.target.value as "created" | "updated")}
+                    onChange={(e) =>
+                      setDateSearchType(e.target.value as "created" | "updated")
+                    }
                     className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 hover:border-green-400 transition-colors"
                   >
                     <option value="created">📅 Ngày tạo đơn</option>
