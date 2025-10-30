@@ -408,7 +408,7 @@ export default function SalesOrders() {
             
             // Nếu chưa chọn trạng thái cụ thể, mặc định chỉ lấy đơn hủy hoặc hoàn thành
             if (orderStatusFilter === "all") {
-              params.append("statusIn", "paid,cancelled");
+              params.append("statusIn", "paid,cancelled, completed, pending");
             }
           } else {
             // Tìm theo ngày tạo đơn (createdAt) - mặc định
