@@ -237,7 +237,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
       (order: any) => order.status === "paid" || order.status === "completed",
     );
     const todaySales = orders.reduce(
-      (sum: number, order: any) => sum + parseFloat(order.total || 0),
+      (sum: number, order: any) => sum + parseFloat(order.subtotal || 0),
       0,
     );
     const totalRevenue = todaySales;
@@ -245,7 +245,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
       const subtotal = parseFloat(order.subtotal || 0);
       const discount = parseFloat(order.discount || 0);
       if (order.priceIncludeTax === true) {
-        return sum + subtotal;
+        return sum + subtotal - discount;
       }
       return sum + (subtotal - discount);
     }, 0);
