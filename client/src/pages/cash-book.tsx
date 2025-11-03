@@ -52,6 +52,8 @@ interface CashTransaction {
   balance: number;
   voucherType?: string;
   internalId?: number;
+  selected?: boolean; // Added for checkbox selection
+  completionDate?: string; // Added for sorting by completion time
 }
 
 export default function CashBookPage({ onLogout }: CashBookPageProps) {
@@ -68,6 +70,7 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("all"); // "all" or specific payment method
   const [voucherTypeFilter, setVoucherTypeFilter] = useState("all"); // "all", "income_voucher", "expense_voucher", "purchase_receipt", "sales_order"
   const [storeFilter, setStoreFilter] = useState("all");
+  const [voucherNumberFilter, setVoucherNumberFilter] = useState(""); // Filter by voucher number
   const [startDate, setStartDate] = useState(() => {
     const today = new Date();
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -77,13 +80,22 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
     return new Date().toISOString().split("T")[0];
   });
 
+  // For row selection
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+
+  // For sorting
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
   // Query general settings to determine date filter logic
   const { data: generalSettings = [] } = useQuery({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/general-settings"],
     queryFn: async () => {
       try {
         const response = await fetch("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/general-settings");
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok)
+          throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
         return Array.isArray(data) ? data : [];
       } catch (error) {
@@ -95,7 +107,7 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
 
   // Check if ST-002 (ngày tạo đơn) is active
   const useCreatedAtFilter = generalSettings.find(
-    (s: any) => s.settingCode === "ST-002" && s.isActive === true
+    (s: any) => s.settingCode === "ST-002" && s.isActive === true,
   );
 
   // Query orders (thu - income from sales)
@@ -273,12 +285,12 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
         return true;
       })
       .forEach((order) => {
-        // Use createdAt or updatedAt based on general settings
-        // ST-002: Use createdAt (ngày tạo đơn)
-        // ST-003 or default: Use updatedAt (ngày hoàn thành/hủy đơn)
-        const orderDate = useCreatedAtFilter 
-          ? new Date(order.createdAt || order.orderedAt)
-          : new Date(order.updatedAt || order.paidAt || order.orderedAt);
+        // Use orderedAt or updatedAt based on general settings
+        // ST-002 = true: Use orderedAt (ngày đặt hàng/ngày tạo đơn)
+        // ST-002 = false: Use updatedAt (ngày hoàn thành/hủy đơn)
+        const orderDate = useCreatedAtFilter
+          ? new Date(order.orderedAt)
+          : new Date(order.updatedAt);
 
         // Calculate amount based on payment method filter
         let transactionAmount = parseFloat(order.total || "0");
@@ -315,6 +327,9 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
           amount: transactionAmount,
           balance: 0, // Will be calculated later
           voucherType: "sales_order",
+          completionDate: useCreatedAtFilter
+            ? order.createdAt
+            : order.updatedAt,
         });
       });
 
@@ -348,6 +363,7 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
             balance: 0, // Will be calculated later
             voucherType: "income_voucher",
             internalId: voucher.id, // Keep internal ID for click handling
+            completionDate: voucher.updatedAt,
           });
         }
       });
@@ -391,6 +407,7 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
             balance: 0, // Will be calculated later
             voucherType: "expense_voucher",
             internalId: voucher.id, // Keep internal ID for click handling
+            completionDate: voucher.updatedAt,
           });
         }
       });
@@ -519,6 +536,7 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
               amount: transactionAmount,
               balance: 0, // Will be calculated later
               voucherType: "purchase_receipt",
+              completionDate: receipt.updatedAt,
             });
           }
         }
@@ -588,6 +606,22 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
     storeFilter,
   ]);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(15);
+
+  // Handle sorting
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle sort order if clicking the same field
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      // Set new field and default to ascending
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
+
   // Filter transactions by type and recalculate summaries
   const filteredData = useMemo(() => {
     let filtered = cashBookData.transactions;
@@ -600,6 +634,13 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
     // Filter by voucher type
     if (voucherTypeFilter !== "all") {
       filtered = filtered.filter((t) => t.voucherType === voucherTypeFilter);
+    }
+
+    // Filter by voucher number
+    if (voucherNumberFilter.trim() !== "") {
+      filtered = filtered.filter((t) =>
+        t.id.toLowerCase().includes(voucherNumberFilter.toLowerCase().trim())
+      );
     }
 
     // Filter by store
@@ -629,7 +670,43 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
       });
     }
 
-    // Recalculate summaries based on filtered transactions
+    // Apply sorting
+    if (sortField) {
+      filtered = [...filtered].sort((a, b) => {
+        let aValue: any = a[sortField as keyof CashTransaction];
+        let bValue: any = b[sortField as keyof CashTransaction];
+
+        // Handle date sorting
+        if (sortField === "date") {
+          aValue = new Date(aValue).getTime();
+          bValue = new Date(bValue).getTime();
+        }
+
+        // Handle completionDate sorting
+        if (sortField === "completionDate") {
+          aValue = aValue ? new Date(aValue).getTime() : 0;
+          bValue = bValue ? new Date(bValue).getTime() : 0;
+        }
+
+        // Handle numeric sorting
+        if (sortField === "amount" || sortField === "balance") {
+          aValue = Number(aValue) || 0;
+          bValue = Number(bValue) || 0;
+        }
+
+        // Handle string sorting
+        if (typeof aValue === "string" && typeof bValue === "string") {
+          aValue = aValue.toLowerCase();
+          bValue = bValue.toLowerCase();
+        }
+
+        if (aValue < bValue) return sortOrder === "asc" ? -1 : 1;
+        if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+
+    // Recalculate summaries based on ALL FILTERED transactions (not just selected)
     const totalIncome = filtered
       .filter((t) => t.type === "thu")
       .reduce((sum, t) => sum + t.amount, 0);
@@ -640,6 +717,13 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
 
     const endingBalance =
       cashBookData.openingBalance + totalIncome - totalExpense;
+
+    console.log('💰 Filtered Data Summary:', {
+      totalTransactions: filtered.length,
+      totalIncome,
+      totalExpense,
+      endingBalance
+    });
 
     return {
       transactions: filtered,
@@ -652,10 +736,28 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
     cashBookData.openingBalance,
     filterType,
     voucherTypeFilter,
+    voucherNumberFilter,
     storeFilter,
     orders,
     purchaseReceipts,
+    sortField,
+    sortOrder,
+    selectedRows,
   ]);
+
+  // Paginated data
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredData.transactions.slice(startIndex, endIndex);
+  }, [filteredData.transactions, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredData.transactions.length / itemsPerPage);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterType, voucherTypeFilter, voucherNumberFilter, storeFilter, startDate, endDate, paymentMethodFilter]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -705,6 +807,44 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
       }
     }
   };
+
+  // Handle checkbox selection
+  const handleRowSelect = (event: React.ChangeEvent<HTMLInputElement>, transactionId: string) => {
+    const isChecked = event.target.checked;
+    setSelectedRows((prev) => {
+      const newSelectedRows = new Set(prev);
+      if (isChecked) {
+        newSelectedRows.add(transactionId);
+      } else {
+        newSelectedRows.delete(transactionId);
+      }
+      return newSelectedRows;
+    });
+  };
+
+  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const isChecked = event.target.checked;
+    setSelectAll(isChecked);
+    setSelectedRows((prev) => {
+      const newSelectedRows = new Set<string>();
+      if (isChecked) {
+        filteredData.transactions.forEach((transaction) => {
+          newSelectedRows.add(transaction.id);
+        });
+      }
+      return newSelectedRows;
+    });
+  };
+
+  // Update selectAll state if all rows are manually selected/deselected
+  useEffect(() => {
+    if (filteredData.transactions.length > 0 && selectedRows.size === filteredData.transactions.length) {
+      setSelectAll(true);
+    } else {
+      setSelectAll(false);
+    }
+  }, [selectedRows, filteredData.transactions]);
+
 
   // Handle closing modals
   const handleCloseIncomeModal = () => {
@@ -855,6 +995,19 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                       </SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Voucher Number Filter */}
+                <div>
+                  <Label className="text-sm font-bold text-gray-800 mb-3 block">
+                    {t("common.voucherCode")}
+                  </Label>
+                  <Input
+                    type="text"
+                    value={voucherNumberFilter}
+                    onChange={(e) => setVoucherNumberFilter(e.target.value)}
+                    placeholder={t("common.voucherCode")}
+                  />
                 </div>
 
                 {/* Start Date */}
@@ -1254,38 +1407,127 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[140px] font-bold">
-                          {t("common.voucherCode")}
-                        </TableHead>
-                        <TableHead className="w-[150px] font-bold">
-                          {t("common.transactionDate")}
-                        </TableHead>
-                        <TableHead className="w-[110px] font-bold">
-                          {t("common.dateTime")}
-                        </TableHead>
-                        <TableHead className="w-[150px] font-bold">
-                          {t("common.transactionType")}
-                        </TableHead>
-                        <TableHead className="w-[180px] font-bold">
-                          {t("common.payerReceiver")}
-                        </TableHead>
-                        <TableHead className="text-right w-[130px] font-bold">
-                          {t("common.income")}
-                        </TableHead>
-                        <TableHead className="text-right w-[130px] font-bold">
-                          {t("common.expense")}
-                        </TableHead>
-                        <TableHead className="text-right w-[140px] font-bold">
-                          {t("common.balance")}
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredData.transactions.map((transaction) => (
+                <>
+                  <div className="overflow-x-auto w-full">
+                    <Table className="min-w-full">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[40px] font-bold whitespace-nowrap">
+                            <Input
+                              type="checkbox"
+                              checked={selectAll}
+                              onChange={handleSelectAll}
+                              className="w-4 h-4"
+                            />
+                          </TableHead>
+                          <TableHead 
+                            className="w-[110px] font-bold whitespace-nowrap cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort("id")}
+                          >
+                            <div className="flex items-center gap-1">
+                              {t("common.voucherCode")}
+                              {sortField === "id" && (
+                                <span className="text-blue-600">
+                                  {sortOrder === "asc" ? "↑" : "↓"}
+                                </span>
+                              )}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="w-[95px] font-bold whitespace-nowrap cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort("date")}
+                          >
+                            <div className="flex items-center gap-1">
+                              {t("common.transactionDate")}
+                              {sortField === "date" && (
+                                <span className="text-blue-600">
+                                  {sortOrder === "asc" ? "↑" : "↓"}
+                                </span>
+                              )}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="w-[95px] font-bold whitespace-nowrap cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort("completionDate")}
+                          >
+                            <div className="flex items-center gap-1">
+                              {t("common.dateTime")}
+                              {sortField === "completionDate" && (
+                                <span className="text-blue-600">
+                                  {sortOrder === "asc" ? "↑" : "↓"}
+                                </span>
+                              )}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="w-[120px] font-bold whitespace-nowrap cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort("description")}
+                          >
+                            <div className="flex items-center gap-1">
+                              {t("common.transactionType")}
+                              {sortField === "description" && (
+                                <span className="text-blue-600">
+                                  {sortOrder === "asc" ? "↑" : "↓"}
+                                </span>
+                              )}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="w-[150px] max-w-[150px] font-bold whitespace-nowrap cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort("source")}
+                          >
+                            <div className="flex items-center gap-1">
+                              {t("common.payerReceiver")}
+                              {sortField === "source" && (
+                                <span className="text-blue-600">
+                                  {sortOrder === "asc" ? "↑" : "↓"}
+                                </span>
+                              )}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="text-right w-[110px] font-bold whitespace-nowrap cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort("amount")}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              {t("common.income")}
+                              {sortField === "amount" && sortOrder && (
+                                <span className="text-blue-600">
+                                  {sortOrder === "asc" ? "↑" : "↓"}
+                                </span>
+                              )}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="text-right w-[110px] font-bold whitespace-nowrap cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort("amount")}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              {t("common.expense")}
+                              {sortField === "amount" && sortOrder && (
+                                <span className="text-blue-600">
+                                  {sortOrder === "asc" ? "↑" : "↓"}
+                                </span>
+                              )}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="text-right w-[120px] font-bold whitespace-nowrap cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort("balance")}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              {t("common.balance")}
+                              {sortField === "balance" && (
+                                <span className="text-blue-600">
+                                  {sortOrder === "asc" ? "↑" : "↓"}
+                                </span>
+                              )}
+                            </div>
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedData.map((transaction) => (
                         <TableRow
                           key={transaction.id}
                           className={
@@ -1296,12 +1538,35 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                           }
                           onClick={() => handleTransactionClick(transaction)}
                         >
-                          <TableCell className="font-medium w-[140px]">
-                            <div className="truncate" title={transaction.id}>
-                              {transaction.id}
-                            </div>
+                          <TableCell className="w-[40px] p-2" onClick={(e) => e.stopPropagation()}>
+                            <Input
+                              type="checkbox"
+                              checked={selectedRows.has(transaction.id)}
+                              onChange={(e) => handleRowSelect(e, transaction.id)}
+                              className="w-4 h-4"
+                            />
                           </TableCell>
-                          <TableCell className="w-[110px]">
+                          <TableCell className="font-medium w-[110px] max-w-[110px] p-2">
+                            <button
+                              onClick={() => {
+                                // Navigate to sales orders with order filter for sales_order type
+                                if (transaction.voucherType === 'sales_order') {
+                                  const orderNumber = transaction.id;
+                                  window.location.href = `/sales-orders?order=${orderNumber}`;
+                                }
+                                // For other voucher types, the existing click handler will work
+                              }}
+                              className={`truncate text-xs text-left w-full ${
+                                transaction.voucherType === 'sales_order'
+                                  ? 'text-blue-600 hover:text-blue-800 hover:underline cursor-pointer'
+                                  : 'text-gray-900'
+                              }`}
+                              title={transaction.id}
+                            >
+                              {transaction.id}
+                            </button>
+                          </TableCell>
+                          <TableCell className="w-[95px] max-w-[95px] p-2">
                             {(() => {
                               // Find the corresponding order/voucher to get creation date
                               let creationDate = transaction.date; // Default to transaction date
@@ -1313,10 +1578,16 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                                     `ORDER-${o.id}` === transaction.id ||
                                     `ORD-${o.id}` === transaction.id,
                                 );
-                                // Use createdAt or orderedAt based on general settings
+                                // Use orderedAt or updatedAt based on general settings
+                                // ST-002 = true: Show orderedAt (ngày đặt hàng)
+                                // ST-002 = false: Show updatedAt (ngày hoàn thành)
                                 creationDate = useCreatedAtFilter
-                                  ? (order?.createdAt || order?.orderedAt || transaction.date)
-                                  : (order?.orderedAt || order?.createdAt || transaction.date);
+                                  ? order?.orderedAt ||
+                                    order?.createdAt ||
+                                    transaction.date
+                                  : order?.updatedAt ||
+                                    order?.orderedAt ||
+                                    transaction.date;
                               } else if (
                                 transaction.voucherType === "purchase_receipt"
                               ) {
@@ -1326,7 +1597,10 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                                     `PURCHASE-${pr.id}` === transaction.id,
                                 );
                                 // Use purchaseDate or createdAt for creation date
-                                creationDate = receipt?.purchaseDate || receipt?.createdAt || transaction.date;
+                                creationDate =
+                                  receipt?.purchaseDate ||
+                                  receipt?.createdAt ||
+                                  transaction.date;
                               } else if (
                                 transaction.voucherType === "income_voucher"
                               ) {
@@ -1335,7 +1609,8 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                                     v.voucherNumber === transaction.id,
                                 );
                                 // Use date field for vouchers
-                                creationDate = voucher?.date || transaction.date;
+                                creationDate =
+                                  voucher?.date || transaction.date;
                               } else if (
                                 transaction.voucherType === "expense_voucher"
                               ) {
@@ -1344,20 +1619,24 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                                     v.voucherNumber === transaction.id,
                                 );
                                 // Use date field for vouchers
-                                creationDate = voucher?.date || transaction.date;
+                                creationDate =
+                                  voucher?.date || transaction.date;
                               }
 
                               return (
                                 <div className="flex items-center gap-1">
                                   <Calendar className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                                  <span className="text-sm">
+                                  <span className="text-xs">
                                     {formatDate(creationDate)}
                                   </span>
                                 </div>
                               );
                             })()}
                           </TableCell>
-                          <TableCell className="w-[150px]">
+                          <TableCell
+                            className="w-[95px] max-w-[95px] p-2 cursor-pointer"
+                            onClick={() => handleTransactionClick(transaction)}
+                          >
                             {(() => {
                               // Find the corresponding order/voucher to get updatedAt
                               let updatedAt = null;
@@ -1369,8 +1648,11 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                                     `ORDER-${o.id}` === transaction.id ||
                                     `ORD-${o.id}` === transaction.id,
                                 );
-                                // Show updatedAt when using updatedAt filter, otherwise show createdAt
-                                updatedAt = useCreatedAtFilter ? order?.createdAt : order?.updatedAt;
+                                // ST-002 = true: Show orderedAt in completion column
+                                // ST-002 = false: Show updatedAt in completion column
+                                updatedAt = useCreatedAtFilter
+                                  ? order?.orderedAt
+                                  : order?.updatedAt;
                               } else if (
                                 transaction.voucherType === "purchase_receipt"
                               ) {
@@ -1401,11 +1683,11 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                               if (updatedAt) {
                                 const date = new Date(updatedAt);
                                 return (
-                                  <div className="text-sm">
+                                  <div className="text-xs">
                                     <div>
                                       {date.toLocaleDateString("vi-VN")}
                                     </div>
-                                    <div className="text-xs text-gray-500">
+                                    <div className="text-[10px] text-gray-500">
                                       {date.toLocaleTimeString("vi-VN", {
                                         hour: "2-digit",
                                         minute: "2-digit",
@@ -1417,16 +1699,19 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                                 );
                               }
                               return (
-                                <span className="text-gray-400 text-sm">-</span>
+                                <span className="text-gray-400 text-xs">-</span>
                               );
                             })()}
                           </TableCell>
-                          <TableCell className="w-[150px]">
+                          <TableCell
+                            className="w-[120px] max-w-[120px] p-2 cursor-pointer"
+                            onClick={() => handleTransactionClick(transaction)}
+                          >
                             <div className="flex items-center gap-1">
                               {transaction.type === "thu" ? (
                                 <>
                                   <Plus className="w-3 h-3 text-green-500 flex-shrink-0" />
-                                  <Badge className="bg-green-100 text-green-800 text-xs truncate">
+                                  <Badge className="bg-green-100 text-green-800 text-[10px] truncate max-w-[90px]">
                                     {t(
                                       `common.incomeCategories.${transaction.description}`,
                                     )}
@@ -1435,41 +1720,44 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                               ) : (
                                 <>
                                   <Minus className="w-3 h-3 text-red-500 flex-shrink-0" />
-                                  <Badge className="bg-red-100 text-red-800 text-xs truncate">
+                                  <Badge className="bg-red-100 text-red-800 text-[10px] truncate max-w-[90px]">
                                     {t(`common.${transaction.description}`)}
                                   </Badge>
                                 </>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="w-[180px]">
+                          <TableCell
+                            className="w-[150px] max-w-[150px] p-2 cursor-pointer"
+                            onClick={() => handleTransactionClick(transaction)}
+                          >
                             <div
-                              className="truncate"
+                              className="truncate overflow-hidden text-ellipsis whitespace-nowrap text-xs"
                               title={transaction.source}
                             >
                               {transaction.source}
                             </div>
                           </TableCell>
-                          <TableCell className="text-right w-[130px]">
+                          <TableCell className="text-right w-[110px] max-w-[110px] p-2">
                             {transaction.type === "thu" ? (
-                              <span className="text-green-600 font-medium text-sm">
+                              <span className="text-green-600 font-medium text-xs whitespace-nowrap">
                                 {formatCurrency(transaction.amount)}
                               </span>
                             ) : (
-                              <span className="text-gray-400">-</span>
+                              <span className="text-gray-400 text-xs">-</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right w-[130px]">
+                          <TableCell className="text-right w-[110px] max-w-[110px] p-2">
                             {transaction.type === "chi" ? (
-                              <span className="text-red-600 font-medium text-sm">
+                              <span className="text-red-600 font-medium text-xs whitespace-nowrap">
                                 {formatCurrency(transaction.amount)}
                               </span>
                             ) : (
-                              <span className="text-gray-400">-</span>
+                              <span className="text-gray-400 text-xs">-</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right font-medium w-[140px]">
-                            <span className="text-sm">
+                          <TableCell className="text-right font-medium w-[120px] max-w-[120px] p-2">
+                            <span className="text-xs text-blue-600 whitespace-nowrap">
                               {formatCurrency(transaction.balance)}
                             </span>
                           </TableCell>
@@ -1478,9 +1766,124 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                     </TableBody>
                   </Table>
                 </div>
+              </>
               )}
             </CardContent>
           </Card>
+
+          {filteredData.transactions.length > 0 && (
+            <>
+              {/* Pagination Controls */}
+              <div className="mt-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm">{t("common.show")}</Label>
+                  <Select
+                    value={itemsPerPage.toString()}
+                    onValueChange={(value) => {
+                      setItemsPerPage(parseInt(value));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-[70px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">15</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                      <SelectItem value="200">200</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Label className="text-sm">{t("common.rows")}</Label>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-gray-600">
+                    {t("common.page")} {currentPage} / {totalPages}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                      className="h-8 w-8"
+                    >
+                      «
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="h-8 w-8"
+                    >
+                      ‹
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="h-8 w-8"
+                    >
+                      ›
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="h-8 w-8"
+                    >
+                      »
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Summary Footer */}
+          <div className="mt-4 bg-blue-50 border-t-2 border-blue-200 font-bold rounded-lg p-4">
+            <div className="flex items-center justify-center gap-8 text-sm">
+              <div className="flex flex-col items-center gap-1">
+                <span>{t("common.total")} {t("common.income")}</span>
+                <span className="text-green-600 text-lg">
+                  {formatCurrency(
+                    filteredData.transactions
+                      .filter((t) => selectedRows.has(t.id) && t.type === "thu")
+                      .reduce((sum, t) => sum + t.amount, 0)
+                  )}
+                </span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <span>{t("common.total")} {t("common.expense")}</span>
+                <span className="text-red-600 text-lg">
+                  -{formatCurrency(
+                    filteredData.transactions
+                      .filter((t) => selectedRows.has(t.id) && t.type === "chi")
+                      .reduce((sum, t) => sum + t.amount, 0)
+                  )}
+                </span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <span className="hidden">{t("common.closingBalance")}</span>
+                <span className="text-blue-600 text-lg hidden">
+                  {formatCurrency(
+                    cashBookData.openingBalance +
+                    filteredData.transactions
+                      .filter((t) => selectedRows.has(t.id) && t.type === "thu")
+                      .reduce((sum, t) => sum + t.amount, 0) -
+                    filteredData.transactions
+                      .filter((t) => selectedRows.has(t.id) && t.type === "chi")
+                      .reduce((sum, t) => sum + t.amount, 0)
+                  )}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

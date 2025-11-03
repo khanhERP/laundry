@@ -3,6 +3,7 @@ export type Language = "ko" | "en" | "vi";
 // Common translations interface
 export interface CommonTranslations {
   loading: string;
+  phoneNumber: string;
   save: string;
   cancel: string;
   delete: string;
@@ -133,6 +134,8 @@ export interface CommonTranslations {
   days90: string;
   days180: string;
   days365: string;
+  dateRange: string;
+  quickSelect: string;
 }
 
 // Navigation translations interface

@@ -4,6 +4,10 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
   ko: {
     loading: "로딩 중...",
     sku: "SKU",
+    phoneNumber: "전화번호",
+    noOrders: "주문이 없습니다",
+    productDeleteSuccess: "제품이 성공적으로 삭제되었습니다",
+    productDeleteInUseError: "거래에 사용된 제품은 삭제할 수 없습니다",
     transactionDate: "거래 날짜",
     confirmCancelOrderMessage: "주문을 취소하시겠습니까?",
     confirmCancelOrder: "주문 취소 확인",
@@ -23,6 +27,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     saving: "저장 중...",
     zone: "구역",
     no: "번호",
+    filters: "필터",
     selectImageFile: "이미지 파일을 선택하거나",
     amountShortfall: "부족 금액",
     dragDropUpload: "드래그앤드롭으로 업로드",
@@ -282,7 +287,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     insufficient: "부족",
     generatingQr: "QR 생성 중...",
     showVirtualKeyboard: "가상 키보드 표시",
-    hideVirtualKeyboard: "가상 키보드 숨 ��기",
+    hideVirtualKeyboard: "가상 키보드 숨 기",
     hideKeyboard: "키보드 숨기기",
     showKeyboard: "가상 키보드 표시",
 
@@ -385,7 +390,8 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     phoneNumberPlaceholder: "전화번호",
     explanationPlaceholder: "자세한 설명...",
     confirmDelete: "삭제 확인",
-    confirmDeleteVoucher: "증서 '{voucherNumber}'을(를) 삭제하시겠습니까?",
+    confirmDeleteVoucher:
+      "증서 '{voucherNumber}'을(를) 삭제하시겠습니까?",
     cannotUndo: "이 작업은 되돌릴 수 없습니다.",
     skip: "건너뛰기",
     agree: "동의",
@@ -542,6 +548,9 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
       days90: "90일",
       days180: "180일",
       days365: "365일",
+      dateRange: "날짜 범위",
+      quickSelect: "빠른 선택",
+      summary: "요약",
 
       // Sales channels
       pos: "카운터 판매",
@@ -588,8 +597,9 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
       confirmDeleteCategory: "이 카테고리를 삭제하시겠습니까?",
       deleteCategoryWarning:
         "경고: 이 작업은 되돌릴 수 없습니다. 카테고리가 시스템에서 영구적으로 삭제됩니다.",
-      ensureNoProducts: "삭제하기 전에 이 카테고리에 제품이 없는지 확인하세요.",
-      deleteCategory: "카테고리 삭제",
+      deleteCategoryDetails:
+        "삭제하기 전에 이 카테고리에 제품이 없는지 확인하세요.",
+      deleteCategoryAction: "카테고리 삭제",
       categoryDeletedSuccess: "카테고리가 성공적으로 삭제되었습니다",
       categoryDeleteError: "카테고리 삭제 중 오류가 발생했습니다",
       productDeletedSuccess: "제품이 성공적으로 삭제되었습니다",
@@ -632,6 +642,16 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
       deleteCategoryAction: "카테고리 삭제",
       selectImageFile: "이미지 파일을 선택하거나",
       dragDropUpload: "드래그엤드롭으로 업로드",
+      deleteProductAction: "삭제",
+      deleteProductWarning:
+        "제품은 주문이나 구매 영수증에 사용되지 않은 경우에만 삭제할 수 있습니다.",
+      confirmDeleteProduct: "제품 삭제 확인",
+      confirmDeleteProductDesc: "제품을 삭제하시겠습니까",
+      deleteProductDetails:
+        "이 작업은 취소할 수 없습니다. 제품이 시스템에서 영구적으로 삭제됩니다.",
+      productDeleteInUseError: "거래에 사용된 제품은 삭제할 수 없습니다",
+      productDeleteSuccess: "제품이 성공적으로 삭제되었습니다",
+      productDeleteError: "제품을 삭제할 수 없습니다",
     },
 
     // Spending thresholds
@@ -650,10 +670,12 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     // Time periods
     days30: "30일",
     days60: "60일",
-    newPayment: "새 결제 방법",
     days90: "90일",
     days180: "180일",
     days365: "365일",
+    dateRange: "날짜 범위",
+    quickSelect: "빠른 선택",
+    summary: "요약",
 
     // Product type
     productType: "상품 유형",
@@ -663,8 +685,6 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     create: "생성",
     update: "업데이트",
     summary: "요약",
-    confimremote:
-      "상품 productname 데이터베이스에서 영구적으로 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.",
 
     // Unit indicators
     perUnit: "개당",
@@ -688,6 +708,10 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
   en: {
     save: "Save",
     cancel: "Cancel",
+    phoneNumber: "Phone Number",
+    noOrders: "No orders found",
+    productDeleteSuccess: "Product deleted successfully",
+    productDeleteInUseError: "Cannot delete product because it has been used in transactions",
     transactionDate: "Transaction Date",
     confirmCancelOrderMessage: "Are you sure you want to cancel this order?",
     confirmCancelOrder: "Confirm Cancel Order",
@@ -716,6 +740,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     remove: "Remove",
     zone: "Zone",
     floor: "Floor",
+    filters: "Filters",
     update: "Update",
     create: "Create",
     search: "Search",
@@ -900,13 +925,14 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     of: "of",
     for: "for",
     show: "Show",
-    rows: "rows",
+    rows: "Rows",
     page: "Page",
     regularCustomer: "Regular Customer",
     goldCustomer: "Gold Customer",
     customerGroup: "Customer Group",
     walkInCustomer: "Walk-in Customer",
     backToPOS: "Back to POS",
+    selected: "selected",
 
     email: "Email",
 
@@ -1037,7 +1063,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     confirmDelete: "Confirm Delete",
     confirmDeleteVoucher:
       "Are you sure you want to delete voucher '{voucherNumber}'?",
-    cannotUndo: "This action cannot be undone.",
+    cannotUndo: "This action cannot beundone.",
     skip: "Skip",
     agree: "Agree",
     incomeCategory: "Income Type",
@@ -1220,6 +1246,17 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
       deleteCategoryDetails:
         "Please ensure there are no products in this category before deletion.",
       deleteCategoryAction: "Delete Category",
+      deleteProductAction: "Delete",
+      deleteProductWarning:
+        "Products can only be deleted if they have not been used in orders or purchase receipts.",
+      confirmDeleteProduct: "Confirm Delete Product",
+      confirmDeleteProductDesc: "Are you sure you want to delete product",
+      deleteProductDetails:
+        "This action cannot be undone. The product will be permanently deleted from the system.",
+      productDeleteInUseError:
+        "Cannot delete product because it has been used in transactions",
+      productDeleteSuccess: "Product deleted successfully",
+      productDeleteError: "Failed to delete product",
     },
 
     // Spending thresholds
@@ -1238,11 +1275,12 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     // Time periods
     days30: "30 days",
     days60: "60 days",
-    confimremote:
-      "Are you sure you want to permanently delete productname from the database? This action cannot be undone.",
     days90: "90 days",
     days180: "180 days",
     days365: "365 days",
+    dateRange: "Date Range",
+    quickSelect: "Quick Select",
+    summary: "Summary",
 
     // Product type
     productType: "Product Type",
@@ -1266,11 +1304,16 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     fileUpload: "File Upload",
     totalAmountSubtotal: "Subtotal Amount",
     summary: "Summary",
+    selected: "selected",
   },
   vi: {
     save: "Lưu",
     sku: "SKU",
+    phoneNumber: "Số điện thoại",
     shop: "Cửa hàng",
+    noOrders: "Không tìm thấy đơn hàng",
+    productDeleteSuccess: "Xóa sản phẩm thành công",
+    productDeleteInUseError: "Không thể xóa sản phẩm vì đã được sử dụng trong các giao dịch bán hàng",
     transactionDate: "Ngày chứng từ",
     stock: "Tồn kho",
     confirmCancelOrderMessage: "Bạn có chắc chắn muốn hủy đơn hàng này?",
@@ -1297,6 +1340,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     all: "Tất cả",
     floor: "Tầng",
     zone: "Khu vực",
+    filters: "Bộ lọc",
     update: "Cập nhật",
     create: "Tạo",
     search: "Tìm kiếm",
@@ -1331,6 +1375,8 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     refresh: "Làm mới",
     back: "Quay lại",
     next: "Sau",
+    first: "Đầu",
+    last: "Cuối",
     previous: "Trước",
     all: "Tất cả",
     none: "Không có",
@@ -1342,9 +1388,6 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     invoiceSymbol: "Ký hiệu hóa đơn",
     invoiceNumber: "Số hóa đơn",
     orderList: "Danh sách đơn hàng",
-    filters: "Bộ lọc",
-    cancelOrder: "Hủy đơn",
-    exportExcel: "Xuất excel",
     subtotalAmount: "Tổng tiền hàng",
     totalTax: "Tổng thuế",
     grandTotal: "Tổng cộng",
@@ -1364,7 +1407,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     unit: "ĐVT",
     quantity: "SL",
     unitPrice: "Đơn giá",
-    totalAmountSubtotal: "Thành tiền",
+    totalAmount: "Tổng tiền",
     taxVAT: "Thuế GTGT",
     totalPayment: "Tổng tiền thanh toán",
     subtotalAmount: "Thành tiền trước thuế",
@@ -1449,14 +1492,13 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     of: "của",
     for: "cho",
     show: "Hiển thị",
-    rows: "hàng",
+    rows: "dòng",
     page: "Trang",
     regularCustomer: "Khách hàng thường",
     goldCustomer: "Khách hàng vàng",
     customerGroup: "Nhóm khách hàng",
     walkInCustomer: "Khách hàng vãng lai",
     backToPOS: "Quay lại POS",
-    storeFilter: "Lọc theo cửa hàng",
 
     email: "Email",
 
@@ -1659,6 +1701,16 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
       error: "Lỗi phát hành",
     },
 
+    // Time periods (moved from comboValues)
+    days30: "30 ngày",
+    days60: "60 ngày",
+    days90: "90 ngày",
+    days180: "180 ngày",
+    days365: "365 ngày",
+    dateRange: "Khoảng thời gian",
+    quickSelect: "Chọn nhanh",
+    summary: "Tóm tắt",
+
     // Combo values
     comboValues: {
       // Gender options
@@ -1721,14 +1773,6 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
       chef: "Đầu bếp",
       cleaner: "Nhân viên vệ sinh",
 
-      // Time periods
-      days30: "30 ngày",
-      days60: "60 ngày",
-      days90: "90 ngày",
-      days180: "180 ngày",
-      days365: "365 ngày",
-      summary: "Tóm tắt",
-
       // Sales channels
       pos: "Bán tại quầy",
       online: "Bán online",
@@ -1755,7 +1799,6 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
       noTemplatesFound: "Chưa có mẫu số HĐĐT nào",
       clickAddTemplateToStart: "Nhấn 'Thêm mẫu số' để bắt đầu",
       loadingData: "Đang tải dữ liệu...",
-      templateUsage: "Trạng thái sử dụng",
       searchKeyword: "Thử tìm kiếm với từ khóa khác",
       addFirstEmployee: "Thêm nhân viên đầu tiên để bắt đầu",
       noEmployeesFound: "Không tìm thấy nhân viên nào phù hợp",
@@ -1780,6 +1823,17 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
       deleteCategoryDetails:
         "Hãy đảm bảo rằng không còn sản phẩm nào trong danh mục này trước khi xóa.",
       deleteCategoryAction: "Xóa danh mục",
+      deleteProductAction: "Xóa",
+      deleteProductWarning:
+        "Sản phẩm chỉ có thể xóa nếu chưa được sử dụng trong đơn hàng hoặc phiếu nhập kho.",
+      confirmDeleteProduct: "Xác nhận xóa sản phẩm",
+      confirmDeleteProductDesc: "Bạn có chắc chắn muốn xóa sản phẩm",
+      deleteProductDetails:
+        "Hành động này không thể hoàn tác. Sản phẩm sẽ bị xóa vĩnh viễn khỏi hệ thống.",
+      productDeleteInUseError:
+        "Không thể xóa sản phẩm vì đã có giao dịch sử dụng",
+      productDeleteSuccess: "Xóa sản phẩm thành công",
+      productDeleteError: "Không thể xóa sản phẩm",
     },
 
     // Spending thresholds
@@ -1811,7 +1865,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     of: "của",
     for: "cho",
     show: "Hiển thị",
-    rows: "hàng",
+    rows: "dòng",
     page: "Trang",
     total: "Tổng cộng",
     regularCustomer: "Khách hàng thường",
@@ -1835,5 +1889,6 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     urlInput: "Nhập URL",
     fileUpload: "Tải lên tệp",
     summary: "Tóm tắt",
+    selected: "đã chọn",
   },
 };

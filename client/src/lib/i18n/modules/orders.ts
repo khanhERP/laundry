@@ -234,6 +234,7 @@ export const ordersTranslations: { [key: string]: OrdersTranslations } = {
     paymentStatus: "결제 상태",
     storeFilter: "매장",
     allStores: "모든 매장",
+    tryChangingFilters: "다른 필터 조건을 시도해보세요",
   },
   en: {
     atCounter: "At Counter",
@@ -472,6 +473,7 @@ export const ordersTranslations: { [key: string]: OrdersTranslations } = {
     paymentStatus: "Payment Status",
     storeFilter: "Store",
     allStores: "All Stores",
+    tryChangingFilters: "Try changing the filter criteria",
   },
   vi: {
     atCounter: "Tại quầy",
@@ -712,5 +714,6 @@ export const ordersTranslations: { [key: string]: OrdersTranslations } = {
     paymentStatus: "Trạng thái thanh toán",
     storeFilter: "Cửa hàng",
     allStores: "Tất cả cửa hàng",
+    tryChangingFilters: "Thử thay đổi điều kiện lọc",
   },
 };

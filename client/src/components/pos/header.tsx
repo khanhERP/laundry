@@ -193,20 +193,20 @@ export function POSHeader({ onLogout }: POSHeaderProps) {
     } catch (error) {
       console.error("Logout API error:", error);
     }
-    
+
     // Xóa toàn bộ localStorage
     localStorage.clear();
-    
+
     // Xóa toàn bộ sessionStorage
     sessionStorage.clear();
-    
+
     // Xóa tất cả cookies
     document.cookie.split(";").forEach((c) => {
       document.cookie = c
         .replace(/^ +/, "")
         .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
     });
-    
+
     // Xóa cache của browser (nếu có API hỗ trợ)
     if ('caches' in window) {
       caches.keys().then((names) => {
@@ -215,12 +215,12 @@ export function POSHeader({ onLogout }: POSHeaderProps) {
         });
       });
     }
-    
+
     // Gọi callback onLogout nếu có
     if (onLogout) {
       onLogout();
     }
-    
+
     // Chuyển về trang login và reload để xóa state
     window.location.href = "/";
     window.location.reload();
@@ -253,7 +253,7 @@ export function POSHeader({ onLogout }: POSHeaderProps) {
           {/* Navigation Menu */}
           <nav className="flex items-center space-x-2">
             {/* POS Menu Dropdown */}
-            <div className="relative pos-dropdown hidden">
+            <div className="relative pos-dropdown">
               <button
                 className={`flex items-center px-3 py-1.5 rounded-full transition-all duration-200 text-sm text-gray-700 ${
                   [
@@ -765,8 +765,8 @@ export function POSHeader({ onLogout }: POSHeaderProps) {
               >
                 <User className="w-4 h-4 mr-1.5" />
                 <span className="hidden sm:inline">
-                  {currentCashier 
-                    ? currentCashier.name 
+                  {currentCashier
+                    ? currentCashier.name
                     : (storeSettings?.storeName || storeSettings?.userName || storeSettings?.storeCode || "Admin")}
                 </span>
                 <ChevronDown

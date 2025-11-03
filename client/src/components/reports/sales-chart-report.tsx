@@ -939,6 +939,15 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
         const orderTax = Number(order.tax || 0);
         const orderTotal = Number(order.total || 0);
 
+        console.log(`📊 [BIỂU ĐỒ] Đơn hàng ${order.orderNumber || order.id} - Dữ liệu gốc:`, {
+          ngày: dateStr,
+          priceIncludeTax: orderPriceIncludeTax,
+          subtotal: orderSubtotal,
+          discount: orderDiscount,
+          tax: orderTax,
+          total: orderTotal,
+        });
+
         console.log(`📊 [Order ${order.orderNumber || order.id}] - BEFORE PROCESSING:`, {
           orderNumber: order.orderNumber,
           orderId: order.id,
@@ -952,6 +961,9 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
           itemsCount: order.items?.length || 0,
         });
 
+        // Calculate discount based on logic: 
+        // If order items have discount -> sum of item discounts
+        // Otherwise -> use master order discount
         if (orderDiscount == 0) {
           const filteredOrderItems = order.items.filter(
             (item: any) => Number(item.discount || "0") > 0,
@@ -960,31 +972,55 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
             (sum: number, item: any) => sum + Number(item.discount || "0"),
             0,
           );
-          console.log(`📊 [Order ${order.orderNumber || order.id}] - Discount from items:`, {
-            itemsWithDiscount: filteredOrderItems.length,
-            calculatedDiscount: orderDiscount,
+          console.log(`💰 [BIỂU ĐỒ] Đơn ${order.orderNumber || order.id} - Tính giảm giá:`, {
+            nguồn: 'Chi tiết đơn hàng (order items)',
+            sốItemCóGiảmGiá: filteredOrderItems.length,
+            tổngGiảmGiá: orderDiscount,
+            chiTiết: filteredOrderItems.map((item: any) => ({
+              sảnPhẩm: item.productName,
+              giảmGiá: Number(item.discount || "0"),
+            })),
+          });
+        } else {
+          console.log(`💰 [BIỂU ĐỒ] Đơn ${order.orderNumber || order.id} - Tính giảm giá:`, {
+            nguồn: 'Master đơn hàng (order master)',
+            giảmGiáMaster: orderDiscount,
           });
         }
 
         // Calculate revenue based on priceIncludeTax setting
         let doanhThu;
         if (orderPriceIncludeTax) {
-          // When priceIncludeTax = true: doanh thu = subtotal - tax
-          doanhThu = orderSubtotal - orderTax;
-          console.log(`📊 [Order ${order.orderNumber || order.id}] - Revenue calc (priceIncludeTax=true):`, {
-            formula: 'subtotal - tax',
-            subtotal: orderSubtotal,
-            tax: orderTax,
-            revenue: doanhThu,
+          // When priceIncludeTax = true: doanh thu = subtotal - discount - tax
+          doanhThu = orderSubtotal - orderDiscount - orderTax;
+          console.log(`💹 [BIỂU ĐỒ] Đơn ${order.orderNumber || order.id} - CÔNG THỨC DOANH THU (Giá bao gồm thuế):`, {
+            côngThức: '📐 Doanh thu = Thành tiền - Giảm giá - Thuế',
+            thànhTiền: orderSubtotal,
+            giảmGiá: orderDiscount,
+            thuế: orderTax,
+            doanhThu: doanhThu,
+            bướcTính: {
+              bước1: `${orderSubtotal} (Thành tiền)`,
+              bước2: `- ${orderDiscount} (Giảm giá)`,
+              bước3: `- ${orderTax} (Thuế)`,
+              kếtQuả: `= ${doanhThu} ₫`,
+            },
+            ghiChú: '✅ Giá đã bao gồm thuế, trừ cả thuế và giảm giá',
           });
         } else {
           // When priceIncludeTax = false: doanh thu = subtotal - discount
           doanhThu = orderSubtotal - orderDiscount;
-          console.log(`📊 [Order ${order.orderNumber || order.id}] - Revenue calc (priceIncludeTax=false):`, {
-            formula: 'subtotal - discount',
-            subtotal: orderSubtotal,
-            discount: orderDiscount,
-            revenue: doanhThu,
+          console.log(`💹 [BIỂU ĐỒ] Đơn ${order.orderNumber || order.id} - CÔNG THỨC DOANH THU (Giá chưa bao gồm thuế):`, {
+            côngThức: '📐 Doanh thu = Thành tiền - Giảm giá',
+            thànhTiền: orderSubtotal,
+            giảmGiá: orderDiscount,
+            doanhThu: doanhThu,
+            bướcTính: {
+              bước1: `${orderSubtotal} (Thành tiền)`,
+              bước2: `- ${orderDiscount} (Giảm giá)`,
+              kếtQuả: `= ${doanhThu} ₫`,
+            },
+            ghiChú: '✅ Giá chưa bao gồm thuế, không trừ thuế',
           });
         }
 
@@ -995,34 +1031,47 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
         dailySales[dateStr].tax += orderTax; // Thuế
         dailySales[dateStr].subtotal += orderSubtotal; // Subtotal from API
 
-        console.log(`📊 [Order ${order.orderNumber || order.id}] - AFTER ADDING TO DAILY SALES:`, {
-          date: dateStr,
-          addedRevenue: doanhThu,
-          cumulativeRevenue: dailySales[dateStr].revenue,
-          cumulativeOrders: dailySales[dateStr].orders,
-          cumulativeSubtotal: dailySales[dateStr].subtotal,
-          cumulativeDiscount: dailySales[dateStr].discount,
-          cumulativeTax: dailySales[dateStr].tax,
+        console.log(`📈 [BIỂU ĐỒ] Đơn ${order.orderNumber || order.id} - CỘNG DỒN THEO NGÀY:`, {
+          ngày: dateStr,
+          doanhThuĐơnNày: doanhThu,
+          tổngDoanhThuNgày: dailySales[dateStr].revenue,
+          tổngĐơnHàng: dailySales[dateStr].orders,
+          tổngThànhTiền: dailySales[dateStr].subtotal,
+          tổngGiảmGiá: dailySales[dateStr].discount,
+          tổngThuế: dailySales[dateStr].tax,
+          tổngKháchHàng: dailySales[dateStr].customers,
         });
       } catch (error) {
         console.warn("❌ Error processing order for daily sales:", error, order);
       }
     });
 
-    console.log("📊 ========== DAILY SALES SUMMARY ==========");
-    console.log("Daily sales calculated:", dailySales);
-    console.log("📊 Total days with sales:", Object.keys(dailySales).length);
+    console.log("📊 ========== TỔNG KẾT DOANH THU BIỂU ĐỒ ==========");
+    console.log("🔢 Tổng số ngày có dữ liệu:", Object.keys(dailySales).length);
+    console.log("📅 Dữ liệu chi tiết theo ngày:", dailySales);
+    
+    let tổngDoanhThuTấtCảNgày = 0;
+    let tổngĐơnHàngTấtCảNgày = 0;
+    
     Object.entries(dailySales).forEach(([date, data]) => {
-      console.log(`📊 [${date}] Summary:`, {
-        orders: data.orders,
-        revenue: data.revenue,
-        subtotal: data.subtotal,
-        discount: data.discount,
-        tax: data.tax,
-        customers: data.customers,
-        avgRevenuePerOrder: data.orders > 0 ? (data.revenue / data.orders).toFixed(2) : 0,
+      tổngDoanhThuTấtCảNgày += data.revenue;
+      tổngĐơnHàngTấtCảNgày += data.orders;
+      
+      console.log(`📅 [${date}] DOANH THU HIỂN THỊ TRÊN BIỂU ĐỒ:`, {
+        '📊 Số đơn hàng': data.orders,
+        '💰 Doanh thu (hiển thị)': `${data.revenue.toLocaleString('vi-VN')} ₫`,
+        '💵 Thành tiền': `${data.subtotal.toLocaleString('vi-VN')} ₫`,
+        '🏷️ Giảm giá': `${data.discount.toLocaleString('vi-VN')} ₫`,
+        '📋 Thuế': `${data.tax.toLocaleString('vi-VN')} ₫`,
+        '👥 Khách hàng': data.customers,
+        '📈 TB/đơn': data.orders > 0 ? `${(data.revenue / data.orders).toLocaleString('vi-VN')} ₫` : '0 ₫',
       });
     });
+    
+    console.log("💎 ========== TỔNG KẾT CUỐI CÙNG ==========");
+    console.log(`📊 Tổng doanh thu TẤT CẢ ngày: ${tổngDoanhThuTấtCảNgày.toLocaleString('vi-VN')} ₫`);
+    console.log(`🛒 Tổng số đơn hàng: ${tổngĐơnHàngTấtCảNgày}`);
+    console.log(`📈 Doanh thu trung bình/đơn: ${tổngĐơnHàngTấtCảNgày > 0 ? (tổngDoanhThuTấtCảNgày / tổngĐơnHàngTấtCảNgày).toLocaleString('vi-VN') : '0'} ₫`);
     console.log("📊 ==========================================");
 
     const paymentMethods: {

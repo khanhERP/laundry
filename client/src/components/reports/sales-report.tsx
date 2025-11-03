@@ -328,22 +328,33 @@ export function SalesReport() {
       });
 
       // Calculate totals based on unique combined data
-      const totalRevenue = uniqueCombinedData.reduce(
+      const totalRevenue = paidOrders.reduce(
         (sum: number, order: any) => {
-          // Revenue = Subtotal (đã trừ giảm giá) + Tax
-          const subtotal = Number(order.subtotal || 0); // Thành tiền sau khi trừ giảm giá
-          const tax = Number(order.tax || 0); // Thuế
-          const revenue = subtotal + tax; // Doanh thu thực tế
+          const subtotal = Number(order.subtotal || 0); // Tạm tính từ database
+          const discount = Number(order.discount || 0); // Giảm giá từ database
+          const tax = Number(order.tax || 0); // Thuế từ database
+          const priceIncludeTax = order.priceIncludeTax === true; // Kiểm tra giá đã bao gồm thuế
+          
+          let salesRevenue = 0;
+          if (priceIncludeTax) {
+            // Nếu giá đã bao gồm thuế: Doanh số = subtotal - discount (subtotal đã có thuế)
+            salesRevenue = subtotal - discount;
+          } else {
+            // Nếu giá chưa bao gồm thuế: Doanh số = subtotal - discount + tax
+            salesRevenue = subtotal - discount + tax;
+          }
 
-          return sum + revenue;
+          return sum + salesRevenue;
         },
         0,
       );
 
       // Calculate subtotal revenue (excluding tax)
       const subtotalRevenue = paidOrders.reduce((total: number, order: any) => {
-        const subtotal = Number(order.subtotal || 0); // Subtotal đã là giá trị sau khi trừ discount
-        return total + subtotal;
+        const subtotal = Number(order.subtotal || 0); // Tạm tính từ database
+        const discount = Number(order.discount || 0); // Giảm giá từ database
+        const netRevenue = subtotal - discount; // Doanh thu thuần = subtotal - discount
+        return total + netRevenue;
       }, 0);
 
       // Total orders should be based on unique orders, not items

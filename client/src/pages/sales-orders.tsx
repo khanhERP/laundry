@@ -290,18 +290,26 @@ export default function SalesOrders() {
     return `${year}-${month}-${day}`;
   };
 
-  const [startDate, setStartDate] = useState(getTodayDate());
+  // Get first day of current month in YYYY-MM-DD format
+  const getFirstDayOfMonth = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    return `${year}-${month}-01`;
+  };
+
+  const [startDate, setStartDate] = useState(getFirstDayOfMonth());
   const [endDate, setEndDate] = useState(getTodayDate());
   const [customerSearch, setCustomerSearch] = useState("");
   const [orderNumberSearch, setOrderNumberSearch] = useState(orderParam || "");
-  const [customerCodeSearch, setCustomerCodeSearch] = useState("");
+  const [productSearch, setProductSearch] = useState("");
   const [salesChannelFilter, setSalesChannelFilter] = useState("all");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [einvoiceStatusFilter, setEinvoiceStatusFilter] = useState("all");
   const [storeCodeFilter, setStoreCodeFilter] = useState("all");
   const [dateSearchType, setDateSearchType] = useState<"created" | "updated">(
-    "created",
-  ); // New state for date search type
+    storeSettings?.businessType === "laundry" ? "updated" : "created",
+  ); // New state for date search type - default to 'updated' for laundry business
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null); // Renamed to selectedItem for clarity
   const [isEditing, setIsEditing] = useState(false);
   const [editableInvoice, setEditableInvoice] = useState<Invoice | null>(null); // Renamed to editableItem
@@ -342,6 +350,11 @@ export default function SalesOrders() {
         }
         let data = await response.json();
         setStoreSettings(data);
+        
+        // Auto-set dateSearchType to 'updated' for laundry business
+        if (data?.businessType === "laundry") {
+          setDateSearchType("updated");
+        }
       } catch (error) {
         console.error("Error fetching store settings:", error);
       }
@@ -387,7 +400,7 @@ export default function SalesOrders() {
       endDate,
       customerSearch,
       orderNumberSearch,
-      customerCodeSearch,
+      productSearch,
       salesChannelFilter,
       orderStatusFilter,
       einvoiceStatusFilter,
@@ -419,10 +432,14 @@ export default function SalesOrders() {
           }
         }
 
-        if (customerSearch) params.append("customerName", customerSearch);
+        // Search by customer name, phone, or code using single parameter
+        if (customerSearch && customerSearch.trim()) {
+          params.append("customerSearch", customerSearch.trim());
+        }
         if (orderNumberSearch) params.append("orderNumber", orderNumberSearch);
-        if (customerCodeSearch)
-          params.append("customerCode", customerCodeSearch);
+        if (productSearch && productSearch.trim()) {
+          params.append("productSearch", productSearch.trim());
+        }
         if (salesChannelFilter && salesChannelFilter !== "all") {
           params.append("salesChannel", salesChannelFilter);
         }
@@ -452,6 +469,7 @@ export default function SalesOrders() {
         }
 
         const url = `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/list?${params.toString()}`;
+        console.log("🔍 Searching orders with customerSearch:", customerSearch, "URL:", url);
         const response = await apiRequest("GET", url);
 
         if (!response.ok) {
@@ -1148,7 +1166,43 @@ export default function SalesOrders() {
     : [];
 
   const filteredInvoices = Array.isArray(combinedData)
-    ? combinedData.sort((a: any, b: any) => {
+    ? combinedData
+        .filter((item: any) => {
+          // Client-side filter by customer search text
+          if (customerSearch && customerSearch.trim()) {
+            const searchText = customerSearch.trim().toLowerCase();
+            const customerName = (item.customerName || "").toLowerCase();
+            const customerPhone = (item.customerPhone || "").toLowerCase();
+            const customerCode = (item.customerCode || item.customerTaxCode || "").toLowerCase();
+            
+            // Check if any field contains the search text
+            return (
+              customerName.includes(searchText) ||
+              customerPhone.includes(searchText) ||
+              customerCode.includes(searchText)
+            );
+          }
+          return true; // Show all if no search text
+        })
+        .filter((item: any) => {
+          // Client-side filter by product search text - filter orders that contain matching products
+          if (productSearch && productSearch.trim()) {
+            const searchText = productSearch.trim().toLowerCase();
+            
+            // Get order items for this order
+            const itemsForOrder = orders.find((o: any) => o.id === item.id)?.items || [];
+            
+            // Check if any item matches the product search
+            return itemsForOrder.some((orderItem: any) => {
+              const productName = (orderItem.productName || "").toLowerCase();
+              const sku = (orderItem.sku || orderItem.productSku || "").toLowerCase();
+              
+              return productName.includes(searchText) || sku.includes(searchText);
+            });
+          }
+          return true; // Show all if no search text
+        })
+        .sort((a: any, b: any) => {
         // Apply custom sorting if a field is selected
         if (sortField) {
           let aValue: any;
@@ -2501,7 +2555,7 @@ export default function SalesOrders() {
       origin: "A1",
     });
     if (!ws["!merges"]) ws["!merges"] = [];
-    ws["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 14 } });
+    ws["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 15 } });
 
     XLSX.utils.sheet_add_aoa(ws, [[]], { origin: "A2" });
 
@@ -2511,6 +2565,7 @@ export default function SalesOrders() {
       t("orders.table"),
       t("orders.customerCode"),
       t("orders.customerName"),
+      t("orders.phoneNumber"),
       t("common.subtotalAmount"),
       t("common.discount"),
       t("common.tax"),
@@ -2537,6 +2592,7 @@ export default function SalesOrders() {
           : "";
       const customerCode = item.customerTaxCode;
       const customerName = item.customerName || "";
+      const customerPhone = item.customerPhone || "";
       const subtotal = parseFloat(item.subtotal || "0");
       const discount = parseFloat(item.discount || "0");
       const tax = parseFloat(item.tax || "0");
@@ -2560,6 +2616,7 @@ export default function SalesOrders() {
         table,
         customerCode,
         customerName,
+        customerPhone,
         subtotal,
         discount,
         tax,
@@ -2581,6 +2638,7 @@ export default function SalesOrders() {
       { wch: 8 },
       { wch: 12 },
       { wch: 15 },
+      { wch: 12 },
       { wch: 12 },
       { wch: 10 },
       { wch: 10 },
@@ -2613,7 +2671,7 @@ export default function SalesOrders() {
       };
     }
 
-    for (let col = 0; col <= 14; col++) {
+    for (let col = 0; col <= 15; col++) {
       const cellAddress = XLSX.utils.encode_cell({ r: 2, c: col });
       if (ws[cellAddress]) {
         ws[cellAddress].s = {
@@ -2639,9 +2697,9 @@ export default function SalesOrders() {
       const isEven = (row - 3) % 2 === 0;
       const bgColor = isEven ? "FFFFFF" : "F2F2F2";
 
-      for (let col = 0; col <= 14; col++) {
+      for (let col = 0; col <= 15; col++) {
         const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
-        const isCurrency = [5, 6, 7, 8].includes(col);
+        const isCurrency = [6, 7, 8, 9].includes(col);
 
         if (ws[cellAddress]) {
           ws[cellAddress].s = {
@@ -2909,8 +2967,8 @@ export default function SalesOrders() {
       <POSHeader />
       {/* Right Sidebar */}
       <RightSidebar />
-      <div className="main-content px-6">
-        <div className="max-w-full mx-auto py-8">
+      <div className="main-content px-4 pt-24">
+        <div className="w-full mx-auto py-6">
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-4">
               <FileText className="w-6 h-6 text-green-600" />
@@ -2986,10 +3044,11 @@ export default function SalesOrders() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2 text-gray-700">
-                    {t("orders.customer")}
+                    <Search className="inline-block w-4 h-4 mr-1" />
+                    Tìm khách hàng (Tên, SĐT, Mã KH)
                   </label>
                   <Input
-                    placeholder={t("reports.customerFilterPlaceholder")}
+                    placeholder="Nhập tên, số điện thoại hoặc mã khách hàng..."
                     value={customerSearch}
                     onChange={(e) => setCustomerSearch(e.target.value)}
                     className="w-full h-10"
@@ -2997,12 +3056,16 @@ export default function SalesOrders() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2 text-gray-700">
-                    {t("orders.productSearch")}
+                    <Search className="inline-block w-4 h-4 mr-1" />
+                    Tìm sản phẩm (Tên, SKU)
                   </label>
                   <Input
-                    placeholder={t("common.customerCodeSearchPlaceholder")}
-                    value={customerCodeSearch}
-                    onChange={(e) => setCustomerCodeSearch(e.target.value)}
+                    placeholder="Nhập tên hoặc mã sản phẩm..."
+                    value={productSearch}
+                    onChange={(e) => {
+                      setProductSearch(e.target.value);
+                      setCurrentPage(1); // Reset to first page when searching
+                    }}
                     className="w-full h-10"
                   />
                 </div>
@@ -3148,10 +3211,10 @@ export default function SalesOrders() {
               ) : (
                 <div>
                   <div className="w-full overflow-x-auto border rounded-md bg-white">
-                    <table className="w-full min-w-[1600px] table-fixed">
+                    <table className="w-full min-w-[2000px] table-auto">
                       <thead>
                         <tr className="bg-gray-50 border-b">
-                          <th className="w-[50px] px-3 py-3 text-center font-medium text-sm text-gray-600">
+                          <th className="w-[60px] px-4 py-3 text-center font-medium text-sm text-gray-600">
                             <Checkbox
                               checked={isAllSelected}
                               ref={(el) => {
@@ -3161,8 +3224,11 @@ export default function SalesOrders() {
                             />
                           </th>
                           <th
-                            className="w-[180px] px-3 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("orderNumber")}
+                            className="min-w-[160px] px-4 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSort("orderNumber");
+                            }}
                           >
                             <div className="leading-tight flex items-center gap-1">
                               {t("orders.orderNumberColumn")}
@@ -3174,13 +3240,16 @@ export default function SalesOrders() {
                             </div>
                           </th>
                           {storeSettings?.businessType === "laundry" && (
-                            <th className="w-[100px] px-3 py-3 text-center font-medium text-sm text-gray-600">
+                            <th className="min-w-[110px] px-4 py-3 text-center font-medium text-sm text-gray-600">
                               {t("common.returned")}
                             </th>
                           )}
                           <th
-                            className="w-[120px] px-3 py-3 text-center font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("status")}
+                            className="min-w-[130px] px-4 py-3 text-center font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSort("status");
+                            }}
                           >
                             <div className="leading-tight flex items-center justify-center gap-1">
                               {t("common.status")}
@@ -3192,8 +3261,11 @@ export default function SalesOrders() {
                             </div>
                           </th>
                           <th
-                            className="w-[180px] px-3 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("createdAt")}
+                            className="min-w-[170px] px-4 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSort("createdAt");
+                            }}
                           >
                             <div className="leading-tight flex items-center gap-1">
                               {t("orders.createdDateColumn")}
@@ -3205,8 +3277,11 @@ export default function SalesOrders() {
                             </div>
                           </th>
                           <th
-                            className="w-[180px] px-3 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("updatedAt")}
+                            className="min-w-[170px] px-4 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSort("updatedAt");
+                            }}
                           >
                             <div className="leading-tight flex items-center gap-1">
                               {t("orders.completedCancelledColumn")}
@@ -3218,8 +3293,11 @@ export default function SalesOrders() {
                             </div>
                           </th>
                           <th
-                            className="w-[80px] px-3 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("salesChannel")}
+                            className="min-w-[90px] px-4 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSort("salesChannel");
+                            }}
                           >
                             <div className="leading-tight flex items-center gap-1">
                               {t("orders.orderSource")}
@@ -3231,8 +3309,11 @@ export default function SalesOrders() {
                             </div>
                           </th>
                           <th
-                            className="w-[120px] px-3 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("customerCode")}
+                            className="min-w-[130px] px-4 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSort("customerCode");
+                            }}
                           >
                             <div className="leading-tight flex items-center gap-1">
                               {t("orders.customerCode")}
@@ -3243,9 +3324,17 @@ export default function SalesOrders() {
                               )}
                             </div>
                           </th>
+                          <th className="min-w-[130px] px-4 py-3 text-left font-medium text-sm text-gray-600">
+                            <div className="leading-tight">
+                              {t("orders.phoneNumber")}
+                            </div>
+                          </th>
                           <th
-                            className="w-[150px] px-3 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("customerName")}
+                            className="min-w-[180px] px-4 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSort("customerName");
+                            }}
                           >
                             <div className="leading-tight flex items-center gap-1">
                               {t("orders.customerName")}
@@ -3257,8 +3346,11 @@ export default function SalesOrders() {
                             </div>
                           </th>
                           <th
-                            className="w-[100px] px-3 py-3 text-right font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("subtotal")}
+                            className="min-w-[130px] px-4 py-3 text-right font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSort("subtotal");
+                            }}
                           >
                             <div className="leading-tight flex items-center justify-end gap-1">
                               {t("common.subtotalAmount")}
@@ -3270,8 +3362,11 @@ export default function SalesOrders() {
                             </div>
                           </th>
                           <th
-                            className="w-[80px] px-3 py-3 text-right font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("discount")}
+                            className="min-w-[100px] px-4 py-3 text-right font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSort("discount");
+                            }}
                           >
                             <div className="leading-tight flex items-center justify-end gap-1">
                               {t("common.discount")}
@@ -3283,8 +3378,11 @@ export default function SalesOrders() {
                             </div>
                           </th>
                           <th
-                            className="w-[90px] px-3 py-3 text-right font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("tax")}
+                            className="min-w-[100px] px-4 py-3 text-right font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSort("tax");
+                            }}
                           >
                             <div className="leading-tight flex items-center justify-end gap-1">
                               {t("common.tax")}
@@ -3296,8 +3394,11 @@ export default function SalesOrders() {
                             </div>
                           </th>
                           <th
-                            className="w-[110px] px-3 py-3 text-right font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("total")}
+                            className="min-w-[130px] px-4 py-3 text-right font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSort("total");
+                            }}
                           >
                             <div className="leading-tight flex items-center justify-end gap-1">
                               {t("common.paid")}
@@ -3309,8 +3410,11 @@ export default function SalesOrders() {
                             </div>
                           </th>
                           <th
-                            className="w-[110px] px-3 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("employeeCode")}
+                            className="min-w-[120px] px-4 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSort("employeeCode");
+                            }}
                           >
                             <div className="leading-tight flex items-center gap-1">
                               {t("common.employeeCode")}
@@ -3322,8 +3426,11 @@ export default function SalesOrders() {
                             </div>
                           </th>
                           <th
-                            className="w-[120px] px-3 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("employeeName")}
+                            className="min-w-[140px] px-4 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSort("employeeName");
+                            }}
                           >
                             <div className="leading-tight flex items-center gap-1">
                               {t("common.employeeName")}
@@ -3335,8 +3442,11 @@ export default function SalesOrders() {
                             </div>
                           </th>
                           <th
-                            className="w-[120px] px-3 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("symbol")}
+                            className="min-w-[130px] px-4 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSort("symbol");
+                            }}
                           >
                             <div className="leading-tight flex items-center gap-1">
                               {t("orders.invoiceSymbol")}
@@ -3348,8 +3458,11 @@ export default function SalesOrders() {
                             </div>
                           </th>
                           <th
-                            className="w-[110px] px-3 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("invoiceNumber")}
+                            className="min-w-[120px] px-4 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSort("invoiceNumber");
+                            }}
                           >
                             <div className="leading-tight flex items-center gap-1">
                               {t("orders.invoiceNumber")}
@@ -3361,8 +3474,11 @@ export default function SalesOrders() {
                             </div>
                           </th>
                           <th
-                            className="w-[200px] px-3 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("notes")}
+                            className="min-w-[250px] px-4 py-3 text-left font-medium text-sm text-gray-600 cursor-pointer hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSort("notes");
+                            }}
                           >
                             <div className="leading-tight flex items-center gap-1">
                               {t("common.notes")}
@@ -3381,8 +3497,8 @@ export default function SalesOrders() {
                             <td
                               colSpan={
                                 storeSettings?.businessType === "laundry"
-                                  ? 18
-                                  : 17
+                                  ? 19
+                                  : 18
                               }
                               className="p-8 text-center text-sm text-gray-500"
                             >
@@ -3547,6 +3663,14 @@ export default function SalesOrders() {
                                   <td className="px-3 py-3">
                                     <div
                                       className="text-sm truncate"
+                                      title={item.customerPhone || "-"}
+                                    >
+                                      {item.customerPhone || "-"}
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-3">
+                                    <div
+                                      className="text-sm truncate"
                                       title={customerName}
                                     >
                                       {customerName}
@@ -3612,8 +3736,8 @@ export default function SalesOrders() {
                                         colSpan={
                                           storeSettings?.businessType ===
                                           "laundry"
-                                            ? 18
-                                            : 17
+                                            ? 19
+                                            : 18
                                         }
                                         className="p-0"
                                       >

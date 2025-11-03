@@ -236,17 +236,42 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
     const orders = ordersData.orders.filter(
       (order: any) => order.status === "paid" || order.status === "completed",
     );
-    const todaySales = orders.reduce(
-      (sum: number, order: any) => sum + parseFloat(order.subtotal || 0),
-      0,
-    );
+    
+    // Tính doanh số bán hàng theo công thức mới
+    const todaySales = orders.reduce((sum: number, order: any) => {
+      const subtotal = parseFloat(order.subtotal || 0);
+      const discount = parseFloat(order.discount || 0);
+      const tax = parseFloat(order.tax || 0);
+      const priceIncludeTax = order.priceIncludeTax === true;
+      
+      let salesRevenue = 0;
+      if (priceIncludeTax) {
+        // Nếu giá đã bao gồm thuế: Doanh số = subtotal - discount (giá đã gồm thuế)
+        salesRevenue = subtotal - discount;
+      } else {
+        // Nếu giá chưa bao gồm thuế: Doanh số = subtotal - discount + tax (phải cộng thuế)
+        salesRevenue = subtotal - discount + tax;
+      }
+      
+      // Debug log để kiểm tra
+      console.log(`📊 [Overview] Đơn ${order.orderNumber || order.id}:`, {
+        subtotal,
+        discount,
+        tax,
+        priceIncludeTax,
+        salesRevenue,
+        công_thức: priceIncludeTax 
+          ? `${subtotal} - ${discount} = ${salesRevenue}` 
+          : `${subtotal} - ${discount} + ${tax} = ${salesRevenue}`
+      });
+      
+      return sum + salesRevenue;
+    }, 0);
+    
     const totalRevenue = todaySales;
     const netRevenue = orders.reduce((sum: number, order: any) => {
       const subtotal = parseFloat(order.subtotal || 0);
       const discount = parseFloat(order.discount || 0);
-      if (order.priceIncludeTax === true) {
-        return sum + subtotal - discount;
-      }
       return sum + (subtotal - discount);
     }, 0);
 
@@ -543,8 +568,8 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                 <CardContent className="pt-6">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="flex flex-col gap-2">
-                      <label className="text-sm font-medium">
-                        {t("reports.storeFilter")}
+                      <label className="text-sm font-medium text-gray-700">
+                        {t("common.storeLabel")}
                       </label>
                       <select
                         value={storeFilter}
@@ -566,7 +591,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                     </div>
                     <div className="flex flex-col gap-2">
                       <label className="text-sm font-medium text-gray-700">
-                        Khoảng thời gian
+                        {t("common.quickSelect")}
                       </label>
                       <Select
                         value={quickRange}
@@ -593,8 +618,16 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                             end = new Date(start);
                             end.setDate(start.getDate() + 6);
                           } else if (value === "lastMonth") {
-                            start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-                            end = new Date(today.getFullYear(), today.getMonth(), 0);
+                            start = new Date(
+                              today.getFullYear(),
+                              today.getMonth() - 1,
+                              1,
+                            );
+                            end = new Date(
+                              today.getFullYear(),
+                              today.getMonth(),
+                              0,
+                            );
                           }
 
                           if (value) {
@@ -606,7 +639,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                         }}
                       >
                         <SelectTrigger className="h-10 border-gray-300 hover:border-green-400 focus:border-green-500 focus:ring-green-500">
-                          <SelectValue placeholder="Chọn nhanh" />
+                          <SelectValue placeholder={t("common.quickSelect")} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="today">Hôm nay</SelectItem>
@@ -617,8 +650,8 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                       </Select>
                     </div>
                     <div className="flex flex-col gap-2">
-                      <label className="text-sm font-medium">
-                        {String(t("reports.startDate"))}
+                      <label className="text-sm font-medium text-gray-700">
+                        {t("common.fromDate")}
                       </label>
                       <Input
                         type="date"
@@ -628,8 +661,8 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                       />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <label className="text-sm font-medium">
-                        {String(t("reports.endDate"))}
+                      <label className="text-sm font-medium text-gray-700">
+                        {t("common.toDate")}
                       </label>
                       <Input
                         type="date"
@@ -705,153 +738,191 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                 <CardContent>
                   {/* Bar Chart with proper X/Y axes */}
                   <TooltipProvider>
-                  <div className="relative h-96 bg-gray-50 rounded-lg p-6">
-                    {(() => {
-                      // Generate all dates in the selected range
-                      const start = new Date(startDate);
-                      const end = new Date(endDate);
-                      const dateArray: any[] = [];
+                    <div className="relative h-96 bg-gray-50 rounded-lg p-6">
+                      {(() => {
+                        // Generate all dates in the selected range
+                        const start = new Date(startDate);
+                        const end = new Date(endDate);
+                        const dateArray: any[] = [];
 
-                      // Loop through each day in the range
-                      for (
-                        let dt = new Date(start);
-                        dt <= end;
-                        dt.setDate(dt.getDate() + 1)
-                      ) {
-                        const dateStr = dt.toISOString().split("T")[0];
+                        // Loop through each day in the range
+                        for (
+                          let dt = new Date(start);
+                          dt <= end;
+                          dt.setDate(dt.getDate() + 1)
+                        ) {
+                          const dateStr = dt.toISOString().split("T")[0];
 
-                        // Find revenue and order count for this date from ordersData - CHECK BY updatedAt
-                        const dayOrders = ordersData?.orders?.filter((order: any) => {
-                          if (!order.updatedAt) return false;
-                          const orderDate = order.updatedAt.split("T")[0];
-                          return orderDate === dateStr && (order.status === "paid" || order.status === "completed");
-                        }) || [];
-
-                        const dayRevenue = dayOrders.reduce((sum: number, order: any) => sum + parseFloat(order.total || 0), 0);
-
-                        // Always add ALL dates to array, even if revenue is 0
-                        dateArray.push({
-                          date: dateStr,
-                          revenue: dayRevenue,
-                          orderCount: dayOrders.length,
-                          day: dt.getDate(),
-                          month: dt.getMonth() + 1,
-                          year: dt.getFullYear(),
-                        });
-                      }
-
-                      if (dateArray.length === 0) {
-                        return (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400">
-                            {t("reports.noDataInDateRange")}
-                          </div>
-                        );
-                      }
-
-                      const maxRevenue = Math.max(
-                        ...dateArray.map((d: any) => d.revenue),
-                        100000, // Minimum scale
-                      );
-
-                      // Calculate Y-axis labels (5 levels)
-                      const yAxisSteps = 5;
-                      const yAxisLabels = [];
-                      for (let i = 0; i <= yAxisSteps; i++) {
-                        const value = (maxRevenue / yAxisSteps) * i;
-                        yAxisLabels.push(value);
-                      }
-
-                      return (
-                        <div className="flex h-full">
-                          {/* Y-axis */}
-                          <div className="flex flex-col justify-between pr-3 border-r border-gray-300 w-32">
-                            {yAxisLabels.reverse().map((label, i) => (
-                              <div key={i} className="text-xs text-gray-600 text-right">
-                                {label.toLocaleString("vi-VN")}
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Chart area */}
-                          <div className="flex-1 pl-4 flex items-end justify-start gap-2 overflow-x-auto pb-8 border-b border-gray-300">
-                            {dateArray.map((day: any, index: number) => {
-                              const heightPercent = maxRevenue > 0 ? (day.revenue / maxRevenue) * 100 : 0;
-                              const hasData = day.revenue > 0;
-
+                          // Find revenue and order count for this date from ordersData - CHECK BY updatedAt
+                          const dayOrders =
+                            ordersData?.orders?.filter((order: any) => {
+                              if (!order.updatedAt) return false;
+                              const orderDate = order.updatedAt.split("T")[0];
                               return (
-                                <Tooltip key={index}>
-                                  <TooltipTrigger asChild>
-                                    <div
-                                      className="flex flex-col items-center group relative cursor-pointer"
-                                      style={{
-                                        minWidth: dateArray.length > 31 ? "28px" : dateArray.length > 14 ? "40px" : "56px",
-                                        flex: dateArray.length <= 7 ? "1" : "0 0 auto",
-                                        height: "100%",
-                                      }}
-                                    >
-                                      {/* Bar container */}
-                                      <div className="flex-1 w-full flex flex-col justify-end">
-                                        {/* Revenue amount on top */}
-                                        {hasData && (
-                                          <div className="mb-1 text-center">
-                                            <span className="text-xs font-semibold text-emerald-600">
-                                              {day.revenue.toLocaleString("vi-VN")}
+                                orderDate === dateStr &&
+                                (order.status === "paid" ||
+                                  order.status === "completed")
+                              );
+                            }) || [];
+
+                          const dayRevenue = dayOrders.reduce(
+                            (sum: number, order: any) =>
+                              sum + parseFloat(order.total || 0),
+                            0,
+                          );
+
+                          // Always add ALL dates to array, even if revenue is 0
+                          dateArray.push({
+                            date: dateStr,
+                            revenue: dayRevenue,
+                            orderCount: dayOrders.length,
+                            day: dt.getDate(),
+                            month: dt.getMonth() + 1,
+                            year: dt.getFullYear(),
+                          });
+                        }
+
+                        if (dateArray.length === 0) {
+                          return (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400">
+                              {t("reports.noDataInDateRange")}
+                            </div>
+                          );
+                        }
+
+                        const maxRevenue = Math.max(
+                          ...dateArray.map((d: any) => d.revenue),
+                          100000, // Minimum scale
+                        );
+
+                        // Calculate Y-axis labels (5 levels)
+                        const yAxisSteps = 5;
+                        const yAxisLabels = [];
+                        for (let i = 0; i <= yAxisSteps; i++) {
+                          const value = (maxRevenue / yAxisSteps) * i;
+                          yAxisLabels.push(value);
+                        }
+
+                        return (
+                          <div className="flex h-full">
+                            {/* Y-axis */}
+                            <div className="flex flex-col justify-between pr-3 border-r border-gray-300 w-32">
+                              {yAxisLabels.reverse().map((label, i) => (
+                                <div
+                                  key={i}
+                                  className="text-xs text-gray-600 text-right"
+                                >
+                                  {label.toLocaleString("vi-VN")}
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Chart area */}
+                            <div className="flex-1 pl-4 flex items-end justify-start gap-2 overflow-x-auto pb-8 border-b border-gray-300">
+                              {dateArray.map((day: any, index: number) => {
+                                const heightPercent =
+                                  maxRevenue > 0
+                                    ? (day.revenue / maxRevenue) * 100
+                                    : 0;
+                                const hasData = day.revenue > 0;
+
+                                return (
+                                  <Tooltip key={index}>
+                                    <TooltipTrigger asChild>
+                                      <div
+                                        className="flex flex-col items-center group relative cursor-pointer"
+                                        style={{
+                                          minWidth:
+                                            dateArray.length > 31
+                                              ? "28px"
+                                              : dateArray.length > 14
+                                                ? "40px"
+                                                : "56px",
+                                          flex:
+                                            dateArray.length <= 7
+                                              ? "1"
+                                              : "0 0 auto",
+                                          height: "100%",
+                                        }}
+                                      >
+                                        {/* Bar container */}
+                                        <div className="flex-1 w-full flex flex-col justify-end">
+                                          {/* Revenue amount on top */}
+                                          {hasData && (
+                                            <div className="mb-1 text-center">
+                                              <span className="text-xs font-semibold text-emerald-600">
+                                                {day.revenue.toLocaleString(
+                                                  "vi-VN",
+                                                )}
+                                              </span>
+                                            </div>
+                                          )}
+
+                                          {/* Bar */}
+                                          <div
+                                            className={`w-full rounded-t transition-all duration-300 ${
+                                              hasData
+                                                ? "bg-emerald-500 group-hover:bg-emerald-600"
+                                                : "bg-gray-300"
+                                            }`}
+                                            style={{
+                                              height: hasData
+                                                ? `${Math.max(heightPercent, 5)}%`
+                                                : "4px",
+                                            }}
+                                          />
+                                        </div>
+
+                                        {/* Date label (X-axis) */}
+                                        <div className="mt-2 text-center">
+                                          <span
+                                            className={`text-xs font-medium ${
+                                              hasData
+                                                ? "text-gray-700"
+                                                : "text-gray-400"
+                                            }`}
+                                          >
+                                            {day.day}/{day.month}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="bg-white border-gray-200 shadow-xl">
+                                      <div className="space-y-2">
+                                        <div className="font-semibold text-sm border-b pb-1">
+                                          {day.day}/{day.month}/{day.year}
+                                        </div>
+                                        <div className="space-y-1 text-xs">
+                                          <div className="flex justify-between gap-4">
+                                            <span className="text-gray-600">
+                                              {t("reports.revenueLabel")}:
+                                            </span>
+                                            <span className="font-bold text-emerald-600">
+                                              {day.revenue.toLocaleString(
+                                                "vi-VN",
+                                              )}{" "}
+                                              ₫
                                             </span>
                                           </div>
-                                        )}
-
-                                        {/* Bar */}
-                                        <div
-                                          className={`w-full rounded-t transition-all duration-300 ${
-                                            hasData
-                                              ? "bg-emerald-500 group-hover:bg-emerald-600"
-                                              : "bg-gray-300"
-                                          }`}
-                                          style={{
-                                            height: hasData ? `${Math.max(heightPercent, 5)}%` : "4px",
-                                          }}
-                                        />
-                                      </div>
-
-                                      {/* Date label (X-axis) */}
-                                      <div className="mt-2 text-center">
-                                        <span className={`text-xs font-medium ${
-                                          hasData ? "text-gray-700" : "text-gray-400"
-                                        }`}>
-                                          {day.day}/{day.month}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent className="bg-white border-gray-200 shadow-xl">
-                                    <div className="space-y-2">
-                                      <div className="font-semibold text-sm border-b pb-1">
-                                        {day.day}/{day.month}/{day.year}
-                                      </div>
-                                      <div className="space-y-1 text-xs">
-                                        <div className="flex justify-between gap-4">
-                                          <span className="text-gray-600">{t("reports.revenueLabel")}:</span>
-                                          <span className="font-bold text-emerald-600">
-                                            {day.revenue.toLocaleString("vi-VN")} ₫
-                                          </span>
-                                        </div>
-                                        <div className="flex justify-between gap-4">
-                                          <span className="text-gray-600">{t("reports.ordersLabel")}:</span>
-                                          <span className="font-semibold text-gray-900">
-                                            {day.orderCount}
-                                          </span>
+                                          <div className="flex justify-between gap-4">
+                                            <span className="text-gray-600">
+                                              {t("reports.ordersLabel")}:
+                                            </span>
+                                            <span className="font-semibold text-gray-900">
+                                              {day.orderCount}
+                                            </span>
+                                          </div>
                                         </div>
                                       </div>
-                                    </div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              );
-                            })}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                );
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
+                        );
+                      })()}
+                    </div>
                   </TooltipProvider>
 
                   {/* Legend with stats */}
@@ -878,15 +949,31 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                           const end = new Date(endDate);
                           let totalRevenue = 0;
 
-                          for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
+                          for (
+                            let dt = new Date(start);
+                            dt <= end;
+                            dt.setDate(dt.getDate() + 1)
+                          ) {
                             const dateStr = dt.toISOString().split("T")[0];
-                            const dayRevenue = ordersData?.orders
-                              ?.filter((order: any) => {
-                                if (!order.updatedAt && !order.createdAt) return false;
-                                const orderDate = (order.updatedAt || order.createdAt).split("T")[0];
-                                return orderDate === dateStr && (order.status === "paid" || order.status === "completed");
-                              })
-                              .reduce((sum: number, order: any) => sum + parseFloat(order.total || 0), 0) || 0;
+                            const dayRevenue =
+                              ordersData?.orders
+                                ?.filter((order: any) => {
+                                  if (!order.updatedAt && !order.createdAt)
+                                    return false;
+                                  const orderDate = (
+                                    order.updatedAt || order.createdAt
+                                  ).split("T")[0];
+                                  return (
+                                    orderDate === dateStr &&
+                                    (order.status === "paid" ||
+                                      order.status === "completed")
+                                  );
+                                })
+                                .reduce(
+                                  (sum: number, order: any) =>
+                                    sum + parseFloat(order.total || 0),
+                                  0,
+                                ) || 0;
                             totalRevenue += dayRevenue;
                           }
 

@@ -1,27 +1,44 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Package, Plus, Edit, Trash2, Search } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import type { Product, Category } from "@shared/schema";
 import { ProductManagerModal } from "@/components/pos/product-manager-modal";
+import Cookies from "js-cookie";
 
 export default function ProductManagementContent() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const [showProductManager, setShowProductManager] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productSearchTerm, setProductSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check if user is admin
+  useEffect(() => {
+    const authToken = Cookies.get("authToken");
+    if (authToken) {
+      try {
+        const payload = JSON.parse(atob(authToken.split('.')[1]));
+        setIsAdmin(payload.isAdmin === true);
+        console.log("🔑 Admin status checked:", payload.isAdmin);
+      } catch (error) {
+        console.error("Failed to parse auth token:", error);
+      }
+    }
+  }, []);
 
   const { data: productsData, isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products"],
@@ -29,6 +46,52 @@ export default function ProductManagementContent() {
 
   const { data: categoriesData } = useQuery<Category[]>({
     queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/categories"],
+  });
+
+  const deleteProductMutation = useMutation({
+    mutationFn: async (productId: number) => {
+      const response = await fetch(`https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products/${productId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || error.code || "Failed to delete product");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products"] });
+      toast({
+        title: t("common.success"),
+        description: t("common.productDeleteSuccess"),
+      });
+      setDeletingProduct(null);
+    },
+    onError: (error: Error) => {
+      let errorMessage = t("common.productDeleteError");
+
+      // Check for specific error codes
+      if (error.message.includes("PRODUCT_IN_ORDER_ITEMS") || 
+          error.message.includes("PRODUCT_IN_PURCHASE_ITEMS") ||
+          error.message.includes("đơn hàng") ||
+          error.message.includes("phiếu nhập kho")) {
+        errorMessage = t("common.productDeleteInUseError");
+      } else if (error.message.includes("ADMIN_REQUIRED")) {
+        errorMessage = "Chỉ admin mới có quyền xóa sản phẩm";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast({
+        variant: "destructive",
+        title: t("common.error"),
+        description: errorMessage,
+      });
+      setDeletingProduct(null);
+    },
   });
 
   const filteredProducts = productsData?.filter((product: Product) =>
@@ -207,6 +270,15 @@ export default function ProductManagementContent() {
                       <Button variant="ghost" size="sm" onClick={() => { setEditingProduct(product); setShowProductManager(true); }}>
                         <Edit className="w-4 h-4" />
                       </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setDeletingProduct(product)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        title="Xóa sản phẩm"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -286,6 +358,57 @@ export default function ProductManagementContent() {
         onClose={() => { setShowProductManager(false); setEditingProduct(null); }}
         product={editingProduct}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingProduct} onOpenChange={(open) => !open && setDeletingProduct(null)}>
+        <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+                  <Trash2 className="w-5 h-5" />
+                  {t("settings.confirmDeleteProductTitle")}
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-left">
+                  <div className="space-y-3">
+                    <p>
+                      {t("settings.confirmDeleteProductDesc")}{" "}
+                      <span className="font-semibold text-gray-900">
+                        "{deletingProduct?.name}"
+                      </span>
+                      ?
+                    </p>
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <div className="w-1 h-full bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <p className="text-sm text-red-700">
+                          <strong>{t("common.warning")}:</strong>{" "}
+                          {t("settings.deleteProductWarning")}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      {t("settings.deleteProductDetails")}
+                    </p>
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="gap-2">
+                <AlertDialogCancel
+                  onClick={() => setDeletingProduct(null)}
+                  className="hover:bg-gray-100"
+                >
+                  {t("common.cancel")}
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => deletingProduct && deleteProductMutation.mutate(deletingProduct.id)}
+                  className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+                  disabled={deleteProductMutation.isPending}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  {deleteProductMutation.isPending ? t("common.deleting") : t("settings.deleteProductAction")}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

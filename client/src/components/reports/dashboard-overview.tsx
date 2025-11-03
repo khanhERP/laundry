@@ -231,17 +231,27 @@ export function DashboardOverview() {
           : null,
       });
 
-      // Calculate total revenue from completed orders (subtotal + tax = revenue after discount)
+      // Calculate total revenue from completed orders (based on priceIncludeTax)
       const totalSalesRevenue = completedOrders.reduce(
         (sum: number, order: any) => {
-          // Revenue = Subtotal (đã trừ giảm giá) + Tax
-          const subtotal = Number(order.subtotal || 0); // Thành tiền sau khi trừ giảm giá
-          const tax = Number(order.tax || 0); // Thuế
-          const revenue = subtotal + tax; // Doanh thu thực tế
+          const subtotal = Number(order.subtotal || 0); // Tạm tính từ database
+          const discount = Number(order.discount || 0); // Giảm giá từ database
+          const tax = Number(order.tax || 0); // Thuế từ database
+          const priceIncludeTax = order.priceIncludeTax === true; // Kiểm tra giá đã bao gồm thuế
+          
+          let salesRevenue = 0;
+          if (priceIncludeTax) {
+            // Nếu giá đã bao gồm thuế: Doanh số = subtotal - discount (thuế đã có trong subtotal)
+            salesRevenue = subtotal - discount;
+          } else {
+            // Nếu giá chưa bao gồm thuế: Doanh số = subtotal - discount + tax
+            salesRevenue = subtotal - discount + tax;
+          }
+          
           console.log(
-            `Processing order ${order.orderNumber}: subtotal=${subtotal}, tax=${tax}, revenue=${revenue}, originalTotal=${order.total}`,
+            `Processing order ${order.orderNumber}: subtotal=${subtotal}, discount=${discount}, tax=${tax}, priceIncludeTax=${priceIncludeTax}, salesRevenue=${salesRevenue}`,
           );
-          return sum + revenue;
+          return sum + salesRevenue;
         },
         0,
       );
@@ -249,8 +259,10 @@ export function DashboardOverview() {
       // Calculate subtotal revenue from completed orders (excludes tax, after discount)
       const subtotalRevenue = completedOrders.reduce(
         (total: number, order: any) => {
-          const subtotal = Number(order.subtotal || 0); // Subtotal đã là giá trị sau khi trừ discount
-          return total + subtotal;
+          const subtotal = Number(order.subtotal || 0); // Tạm tính từ database
+          const discount = Number(order.discount || 0); // Giảm giá từ database
+          const netRevenue = subtotal - discount; // Doanh thu thuần = subtotal - discount
+          return total + netRevenue;
         },
         0,
       );

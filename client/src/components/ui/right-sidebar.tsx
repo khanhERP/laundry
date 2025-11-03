@@ -33,6 +33,9 @@ interface MenuItem {
 // Menu items will be translated using the hook inside the component
 
 export function RightSidebar() {
+  // Return null to completely hide the sidebar
+  return null;
+
   const [isExpanded, setIsExpanded] = useState(false);
   const [isNavCollapsed, setIsNavCollapsed] = useState(true);
   const [location] = useLocation();
@@ -130,7 +133,7 @@ export function RightSidebar() {
   return (
     <div
       className={cn(
-        "fixed left-0 top-16 bottom-0 bg-white border-r border-green-200 shadow-lg transition-all duration-300 z-40 hidden",
+        "fixed left-0 top-16 bottom-0 bg-white border-r border-green-200 shadow-lg transition-all duration-300 z-40",
         isExpanded ? "w-64" : "w-16",
       )}
     >

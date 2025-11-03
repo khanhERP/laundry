@@ -255,25 +255,23 @@ export default function InventoryPage({ onLogout }: InventoryPageProps) {
     onError: (error) => {
       console.error("Delete product error:", error);
 
-      let errorMessage =
-        t("inventory.deleteFailedDescription") ||
-        "Không thể xóa sản phẩm. Vui lòng thử lại.";
+      // Use the error message directly from API if available
+      let errorMessage = error instanceof Error ? error.message : 
+        (t("inventory.deleteFailedDescription") || "Không thể xóa sản phẩm. Vui lòng thử lại.");
 
-      if (
-        error instanceof Error &&
-        error.message.includes("Cannot delete product")
-      ) {
-        if (error.message.includes("transactions")) {
+      // If error message is in English, translate to Vietnamese
+      if (errorMessage.includes("Cannot delete product")) {
+        if (errorMessage.includes("transactions")) {
           errorMessage =
             "Không thể xóa sản phẩm vì đã được sử dụng trong các giao dịch bán hàng.";
-        } else if (error.message.includes("orders")) {
+        } else if (errorMessage.includes("orders")) {
           errorMessage =
-            "Không thể xóa sản phẩm vì đã được sử dụng trong các đơn hàng.";
+            "Không thể xóa sản phẩm vì đã được sử dụng trong đơn hàng.";
         }
       }
 
       toast({
-        title: t("inventory.deleteFailed") || "Xóa thất bại",
+        title: t("common.error"),
         description: errorMessage,
         variant: "destructive",
       });
