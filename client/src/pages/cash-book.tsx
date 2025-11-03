@@ -74,7 +74,12 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
   const [startDate, setStartDate] = useState(() => {
     const today = new Date();
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    return firstDayOfMonth.toISOString().split("T")[0];
+
+    // Điều chỉnh về giờ địa phương
+    const localDate = new Date(
+      firstDayOfMonth.getTime() - firstDayOfMonth.getTimezoneOffset() * 60000,
+    );
+    return localDate.toISOString().split("T")[0];
   });
   const [endDate, setEndDate] = useState(() => {
     return new Date().toISOString().split("T")[0];
@@ -1568,7 +1573,7 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                           </TableCell>
                           <TableCell className="w-[95px] max-w-[95px] p-2">
                             {(() => {
-                              // Find the corresponding order/voucher to get creation date
+                              // Find the corresponding order/voucher to get orderedAt date
                               let creationDate = transaction.date; // Default to transaction date
 
                               if (transaction.voucherType === "sales_order") {
@@ -1578,16 +1583,10 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                                     `ORDER-${o.id}` === transaction.id ||
                                     `ORD-${o.id}` === transaction.id,
                                 );
-                                // Use orderedAt or updatedAt based on general settings
-                                // ST-002 = true: Show orderedAt (ngày đặt hàng)
-                                // ST-002 = false: Show updatedAt (ngày hoàn thành)
-                                creationDate = useCreatedAtFilter
-                                  ? order?.orderedAt ||
-                                    order?.createdAt ||
-                                    transaction.date
-                                  : order?.updatedAt ||
-                                    order?.orderedAt ||
-                                    transaction.date;
+                                // Always use orderedAt (ngày đặt hàng/ngày tạo đơn)
+                                creationDate = order?.orderedAt ||
+                                  order?.createdAt ||
+                                  transaction.date;
                               } else if (
                                 transaction.voucherType === "purchase_receipt"
                               ) {
