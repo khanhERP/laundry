@@ -138,6 +138,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
       selectedFloor, // Include floor filter in query key
       orderStatusFilter, // Include status filter in query key
       storeFilter, // Include store filter in query key - this will trigger refetch when changed
+      selectedShop,
       storeSettings?.isAdmin, // Include admin status in query key
       storeSettings?.parent, // Include parent stores in query key
     ],
@@ -161,7 +162,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
 
         // Add storeFilter query parameter - ALWAYS include it
         const params = new URLSearchParams();
-        params.append("storeFilter", storeFilter || "all");
+        params.append("storeFilter", selectedShop || "all");
 
         const queryString = params.toString();
         const url = `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range/${startDateTimeISO}/${endDateTimeISO}${floorFilter}?${queryString}`;
@@ -352,7 +353,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
       });
       refetchOrders();
     }
-  }, [analysisType, storeFilter, refetchOrders]);
+  }, [analysisType, storeFilter, selectedShop, refetchOrders]);
 
   // Query tables for floor data
   const {
@@ -417,6 +418,16 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: generalSettings } = useQuery({
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/general-settings/by-code"],
+    queryFn: async () => {
+      const response = await fetch("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/general-settings/by-code/ST-002");
+      if (!response.ok) throw new Error("Failed to fetch general settings");
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Product Analysis Data from new API
   const {
     data: productAnalysisData,
@@ -434,6 +445,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
       selectedFloor, // Include floor filter in query key
       productSearch,
       storeFilter, // Include store filter in query key
+      selectedShop,
     ],
     queryFn: async () => {
       try {
@@ -453,7 +465,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
 
         // Construct URL with store filter if it's not 'all'
         const storeCodeFilter =
-          storeFilter !== "all" ? `/${storeFilter}` : "/all";
+          selectedShop !== "all" ? `/${selectedShop}` : "/all";
 
         console.log("📊 Fetching product analysis data:", {
           startDateTimeLocal,
@@ -648,7 +660,6 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
   // Get dashboard stats from orders data
   const getDashboardStats = () => {
     try {
-      // Add proper loading and error checks
       if (ordersLoading || orderItemsLoading) {
         return {
           periodRevenue: 0,
@@ -667,10 +678,11 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
         };
       }
 
-      // Ensure we have valid arrays - add null checks
-      let validOrders = Array.isArray(orders) ? orders : [];
-      const validOrderItems = Array.isArray(orderItems) ? orderItems : [];
-      const validTables = Array.isArray(tables) && tables ? tables : [];
+      // Ensure we have valid arrays - add null/undefined checks
+      const validOrders = orders && Array.isArray(orders) ? orders : [];
+      const validOrderItems =
+        orderItems && Array.isArray(orderItems) ? orderItems : [];
+      const validTables = tables && Array.isArray(tables) ? tables : [];
 
       // Filter completed/paid orders for time analysis (exclude cancelled orders)
       const completedOrders = validOrders.filter(
@@ -694,29 +706,23 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
           : null,
       });
 
-      // Calculate total sales revenue using dashboard formula
-      let periodRevenue = 0;
-      let periodSubtotalRevenue = 0;
+      // Calculate total sales revenue (sum of subtotal) - Doanh thu = Thành tiền (chưa thuế)
+      const periodRevenue = completedOrders.reduce(
+        (sum: number, order: any) => {
+          const subtotal = Number(order.subtotal || 0);
+          return sum + subtotal;
+        },
+        0,
+      );
 
-      completedOrders.forEach((order: any) => {
-        const orderSubtotal = Number(order.subtotal || 0);
-        const orderDiscount = Number(order.discount || 0);
-        const orderTax = Number(order.tax || 0);
-        const orderPriceIncludeTax = order.priceIncludeTax === true;
-
-        // Calculate revenue based on priceIncludeTax setting (same as dashboard)
-        let doanhThu;
-        if (orderPriceIncludeTax) {
-          // When priceIncludeTax = true: doanh thu = subtotal - tax
-          doanhThu = orderSubtotal - orderTax;
-        } else {
-          // When priceIncludeTax = false: doanh thu = subtotal - discount
-          doanhThu = Math.max(0, orderSubtotal - orderDiscount);
-        }
-
-        periodRevenue += doanhThu;
-        periodSubtotalRevenue += orderSubtotal;
-      });
+      // Calculate subtotal revenue (sum of subtotal) - Tổng doanh thu
+      const periodSubtotalRevenue = completedOrders.reduce(
+        (sum: number, order: any) => {
+          const subtotal = Number(order.subtotal || 0);
+          return sum + subtotal;
+        },
+        0,
+      );
 
       // Total count from completed orders only
       const periodOrderCount = completedOrders.length;
@@ -776,7 +782,10 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
       const hourlyOrders: { [key: number]: number } = {};
 
       completedOrders.forEach((order: any) => {
-        const orderDate = new Date(order.orderedAt || order.createdAt);
+        let orderDate = new Date(order.createdAt);
+        if (generalSettings?.isActive === false) {
+          orderDate = new Date(order.updatedAt);
+        }
         if (!isNaN(orderDate.getTime())) {
           const hour = orderDate.getHours();
           hourlyOrders[hour] = (hourlyOrders[hour] || 0) + 1;
@@ -874,8 +883,10 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
         : order.subtotal,
       discount: order.discount || 0,
       paymentMethod: order.paymentMethod || "",
-      createdAt: order.updatedAt,
-      created_at: order.updatedAt,
+      createdAt:
+        generalSettings?.isActive === false ? order.updatedAt : order.createdAt,
+      created_at:
+        generalSettings?.isActive === false ? order.updatedAt : order.createdAt,
       customerName: order.customerName,
       tax: order.tax || 0,
       customerId: order.customerId,
@@ -906,13 +917,10 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
     filteredCompletedOrders.forEach((order: any) => {
       try {
         // Use correct date field from order - prioritize createdAt for consistency with API filter
-        const orderDate = new Date(
-          order.updatedAt ||
-            order.created_at ||
-            order.orderedAt ||
-            order.paidAt ||
-            order.date,
-        );
+        let orderDate = new Date(order.createdAt);
+        if (generalSettings?.isActive === false) {
+          orderDate = new Date(order.updatedAt);
+        }
 
         if (isNaN(orderDate.getTime())) {
           console.warn("Invalid date for order:", order.id);
@@ -939,29 +947,35 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
         const orderTax = Number(order.tax || 0);
         const orderTotal = Number(order.total || 0);
 
-        console.log(`📊 [BIỂU ĐỒ] Đơn hàng ${order.orderNumber || order.id} - Dữ liệu gốc:`, {
-          ngày: dateStr,
-          priceIncludeTax: orderPriceIncludeTax,
-          subtotal: orderSubtotal,
-          discount: orderDiscount,
-          tax: orderTax,
-          total: orderTotal,
-        });
+        console.log(
+          `📊 [BIỂU ĐỒ] Đơn hàng ${order.orderNumber || order.id} - Dữ liệu gốc:`,
+          {
+            ngày: dateStr,
+            priceIncludeTax: orderPriceIncludeTax,
+            subtotal: orderSubtotal,
+            discount: orderDiscount,
+            tax: orderTax,
+            total: orderTotal,
+          },
+        );
 
-        console.log(`📊 [Order ${order.orderNumber || order.id}] - BEFORE PROCESSING:`, {
-          orderNumber: order.orderNumber,
-          orderId: order.id,
-          date: dateStr,
-          rawDate: order.updatedAt,
-          priceIncludeTax: orderPriceIncludeTax,
-          subtotal: orderSubtotal,
-          discount: orderDiscount,
-          tax: orderTax,
-          total: orderTotal,
-          itemsCount: order.items?.length || 0,
-        });
+        console.log(
+          `📊 [Order ${order.orderNumber || order.id}] - BEFORE PROCESSING:`,
+          {
+            orderNumber: order.orderNumber,
+            orderId: order.id,
+            date: dateStr,
+            rawDate: order.updatedAt,
+            priceIncludeTax: orderPriceIncludeTax,
+            subtotal: orderSubtotal,
+            discount: orderDiscount,
+            tax: orderTax,
+            total: orderTotal,
+            itemsCount: order.items?.length || 0,
+          },
+        );
 
-        // Calculate discount based on logic: 
+        // Calculate discount based on logic:
         // If order items have discount -> sum of item discounts
         // Otherwise -> use master order discount
         if (orderDiscount == 0) {
@@ -972,20 +986,26 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
             (sum: number, item: any) => sum + Number(item.discount || "0"),
             0,
           );
-          console.log(`💰 [BIỂU ĐỒ] Đơn ${order.orderNumber || order.id} - Tính giảm giá:`, {
-            nguồn: 'Chi tiết đơn hàng (order items)',
-            sốItemCóGiảmGiá: filteredOrderItems.length,
-            tổngGiảmGiá: orderDiscount,
-            chiTiết: filteredOrderItems.map((item: any) => ({
-              sảnPhẩm: item.productName,
-              giảmGiá: Number(item.discount || "0"),
-            })),
-          });
+          console.log(
+            `💰 [BIỂU ĐỒ] Đơn ${order.orderNumber || order.id} - Tính giảm giá:`,
+            {
+              nguồn: "Chi tiết đơn hàng (order items)",
+              sốItemCóGiảmGiá: filteredOrderItems.length,
+              tổngGiảmGiá: orderDiscount,
+              chiTiết: filteredOrderItems.map((item: any) => ({
+                sảnPhẩm: item.productName,
+                giảmGiá: Number(item.discount || "0"),
+              })),
+            },
+          );
         } else {
-          console.log(`💰 [BIỂU ĐỒ] Đơn ${order.orderNumber || order.id} - Tính giảm giá:`, {
-            nguồn: 'Master đơn hàng (order master)',
-            giảmGiáMaster: orderDiscount,
-          });
+          console.log(
+            `💰 [BIỂU ĐỒ] Đơn ${order.orderNumber || order.id} - Tính giảm giá:`,
+            {
+              nguồn: "Master đơn hàng (order master)",
+              giảmGiáMaster: orderDiscount,
+            },
+          );
         }
 
         // Calculate revenue based on priceIncludeTax setting
@@ -993,35 +1013,41 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
         if (orderPriceIncludeTax) {
           // When priceIncludeTax = true: doanh thu = subtotal - discount - tax
           doanhThu = orderSubtotal - orderDiscount - orderTax;
-          console.log(`💹 [BIỂU ĐỒ] Đơn ${order.orderNumber || order.id} - CÔNG THỨC DOANH THU (Giá bao gồm thuế):`, {
-            côngThức: '📐 Doanh thu = Thành tiền - Giảm giá - Thuế',
-            thànhTiền: orderSubtotal,
-            giảmGiá: orderDiscount,
-            thuế: orderTax,
-            doanhThu: doanhThu,
-            bướcTính: {
-              bước1: `${orderSubtotal} (Thành tiền)`,
-              bước2: `- ${orderDiscount} (Giảm giá)`,
-              bước3: `- ${orderTax} (Thuế)`,
-              kếtQuả: `= ${doanhThu} ₫`,
+          console.log(
+            `💹 [BIỂU ĐỒ] Đơn ${order.orderNumber || order.id} - CÔNG THỨC DOANH THU (Giá bao gồm thuế):`,
+            {
+              côngThức: "📐 Doanh thu = Thành tiền - Giảm giá - Thuế",
+              thànhTiền: orderSubtotal,
+              giảmGiá: orderDiscount,
+              thuế: orderTax,
+              doanhThu: doanhThu,
+              bướcTính: {
+                bước1: `${orderSubtotal} (Thành tiền)`,
+                bước2: `- ${orderDiscount} (Giảm giá)`,
+                bước3: `- ${orderTax} (Thuế)`,
+                kếtQuả: `= ${doanhThu} ₫`,
+              },
+              ghiChú: "✅ Giá đã bao gồm thuế, trừ cả thuế và giảm giá",
             },
-            ghiChú: '✅ Giá đã bao gồm thuế, trừ cả thuế và giảm giá',
-          });
+          );
         } else {
           // When priceIncludeTax = false: doanh thu = subtotal - discount
           doanhThu = orderSubtotal - orderDiscount;
-          console.log(`💹 [BIỂU ĐỒ] Đơn ${order.orderNumber || order.id} - CÔNG THỨC DOANH THU (Giá chưa bao gồm thuế):`, {
-            côngThức: '📐 Doanh thu = Thành tiền - Giảm giá',
-            thànhTiền: orderSubtotal,
-            giảmGiá: orderDiscount,
-            doanhThu: doanhThu,
-            bướcTính: {
-              bước1: `${orderSubtotal} (Thành tiền)`,
-              bước2: `- ${orderDiscount} (Giảm giá)`,
-              kếtQuả: `= ${doanhThu} ₫`,
+          console.log(
+            `💹 [BIỂU ĐỒ] Đơn ${order.orderNumber || order.id} - CÔNG THỨC DOANH THU (Giá chưa bao gồm thuế):`,
+            {
+              côngThức: "📐 Doanh thu = Thành tiền - Giảm giá",
+              thànhTiền: orderSubtotal,
+              giảmGiá: orderDiscount,
+              doanhThu: doanhThu,
+              bướcTính: {
+                bước1: `${orderSubtotal} (Thành tiền)`,
+                bước2: `- ${orderDiscount} (Giảm giá)`,
+                kếtQuả: `= ${doanhThu} ₫`,
+              },
+              ghiChú: "✅ Giá chưa bao gồm thuế, không trừ thuế",
             },
-            ghiChú: '✅ Giá chưa bao gồm thuế, không trừ thuế',
-          });
+          );
         }
 
         dailySales[dateStr].orders += 1;
@@ -1031,47 +1057,61 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
         dailySales[dateStr].tax += orderTax; // Thuế
         dailySales[dateStr].subtotal += orderSubtotal; // Subtotal from API
 
-        console.log(`📈 [BIỂU ĐỒ] Đơn ${order.orderNumber || order.id} - CỘNG DỒN THEO NGÀY:`, {
-          ngày: dateStr,
-          doanhThuĐơnNày: doanhThu,
-          tổngDoanhThuNgày: dailySales[dateStr].revenue,
-          tổngĐơnHàng: dailySales[dateStr].orders,
-          tổngThànhTiền: dailySales[dateStr].subtotal,
-          tổngGiảmGiá: dailySales[dateStr].discount,
-          tổngThuế: dailySales[dateStr].tax,
-          tổngKháchHàng: dailySales[dateStr].customers,
-        });
+        console.log(
+          `📈 [BIỂU ĐỒ] Đơn ${order.orderNumber || order.id} - CỘNG DỒN THEO NGÀY:`,
+          {
+            ngày: dateStr,
+            doanhThuĐơnNày: doanhThu,
+            tổngDoanhThuNgày: dailySales[dateStr].revenue,
+            tổngĐơnHàng: dailySales[dateStr].orders,
+            tổngThànhTiền: dailySales[dateStr].subtotal,
+            tổngGiảmGiá: dailySales[dateStr].discount,
+            tổngThuế: dailySales[dateStr].tax,
+            tổngKháchHàng: dailySales[dateStr].customers,
+          },
+        );
       } catch (error) {
-        console.warn("❌ Error processing order for daily sales:", error, order);
+        console.warn(
+          "❌ Error processing order for daily sales:",
+          error,
+          order,
+        );
       }
     });
 
     console.log("📊 ========== TỔNG KẾT DOANH THU BIỂU ĐỒ ==========");
     console.log("🔢 Tổng số ngày có dữ liệu:", Object.keys(dailySales).length);
     console.log("📅 Dữ liệu chi tiết theo ngày:", dailySales);
-    
+
     let tổngDoanhThuTấtCảNgày = 0;
     let tổngĐơnHàngTấtCảNgày = 0;
-    
+
     Object.entries(dailySales).forEach(([date, data]) => {
       tổngDoanhThuTấtCảNgày += data.revenue;
       tổngĐơnHàngTấtCảNgày += data.orders;
-      
+
       console.log(`📅 [${date}] DOANH THU HIỂN THỊ TRÊN BIỂU ĐỒ:`, {
-        '📊 Số đơn hàng': data.orders,
-        '💰 Doanh thu (hiển thị)': `${data.revenue.toLocaleString('vi-VN')} ₫`,
-        '💵 Thành tiền': `${data.subtotal.toLocaleString('vi-VN')} ₫`,
-        '🏷️ Giảm giá': `${data.discount.toLocaleString('vi-VN')} ₫`,
-        '📋 Thuế': `${data.tax.toLocaleString('vi-VN')} ₫`,
-        '👥 Khách hàng': data.customers,
-        '📈 TB/đơn': data.orders > 0 ? `${(data.revenue / data.orders).toLocaleString('vi-VN')} ₫` : '0 ₫',
+        "📊 Số đơn hàng": data.orders,
+        "💰 Doanh thu (hiển thị)": `${data.revenue.toLocaleString("vi-VN")} ₫`,
+        "💵 Thành tiền": `${data.subtotal.toLocaleString("vi-VN")} ₫`,
+        "🏷️ Giảm giá": `${data.discount.toLocaleString("vi-VN")} ₫`,
+        "📋 Thuế": `${data.tax.toLocaleString("vi-VN")} ₫`,
+        "👥 Khách hàng": data.customers,
+        "📈 TB/đơn":
+          data.orders > 0
+            ? `${(data.revenue / data.orders).toLocaleString("vi-VN")} ₫`
+            : "0 ₫",
       });
     });
-    
+
     console.log("💎 ========== TỔNG KẾT CUỐI CÙNG ==========");
-    console.log(`📊 Tổng doanh thu TẤT CẢ ngày: ${tổngDoanhThuTấtCảNgày.toLocaleString('vi-VN')} ₫`);
+    console.log(
+      `📊 Tổng doanh thu TẤT CẢ ngày: ${tổngDoanhThuTấtCảNgày.toLocaleString("vi-VN")} ₫`,
+    );
     console.log(`🛒 Tổng số đơn hàng: ${tổngĐơnHàngTấtCảNgày}`);
-    console.log(`📈 Doanh thu trung bình/đơn: ${tổngĐơnHàngTấtCảNgày > 0 ? (tổngDoanhThuTấtCảNgày / tổngĐơnHàngTấtCảNgày).toLocaleString('vi-VN') : '0'} ₫`);
+    console.log(
+      `📈 Doanh thu trung bình/đơn: ${tổngĐơnHàngTấtCảNgày > 0 ? (tổngDoanhThuTấtCảNgày / tổngĐơnHàngTấtCảNgày).toLocaleString("vi-VN") : "0"} ₫`,
+    );
     console.log("📊 ==========================================");
 
     const paymentMethods: {
@@ -1099,13 +1139,16 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
       }
       const orderRevenue = Math.max(0, orderSubtotal - discount);
       paymentMethods[method].revenue += orderRevenue;
-      
-      console.log(`💳 [Payment Method: ${method}] Order ${order.orderNumber || order.id}:`, {
-        subtotal: orderSubtotal,
-        discount: discount,
-        revenue: orderRevenue,
-        cumulativeRevenue: paymentMethods[method].revenue,
-      });
+
+      console.log(
+        `💳 [Payment Method: ${method}] Order ${order.orderNumber || order.id}:`,
+        {
+          subtotal: orderSubtotal,
+          discount: discount,
+          revenue: orderRevenue,
+          cumulativeRevenue: paymentMethods[method].revenue,
+        },
+      );
     });
 
     console.log("📊 ========== PAYMENT METHODS SUMMARY ==========");
@@ -1114,7 +1157,8 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
       console.log(`💳 [${method}]:`, {
         count: data.count,
         totalRevenue: data.revenue,
-        avgPerTransaction: data.count > 0 ? (data.revenue / data.count).toFixed(2) : 0,
+        avgPerTransaction:
+          data.count > 0 ? (data.revenue / data.count).toFixed(2) : 0,
       });
     });
     console.log("📊 ===============================================");
@@ -2466,7 +2510,10 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
 
     // Filter completed orders with all search criteria
     const filteredOrders = orders.filter((order: any) => {
-      const orderDate = new Date(order.createdAt);
+      let orderDate = new Date(order.createdAt);
+      if (generalSettings?.isActive === false) {
+        orderDate = new Date(order.updatedAt);
+      }
 
       if (isNaN(orderDate.getTime())) {
         console.warn("Skipping order with invalid createdAt date:", order.id);
@@ -2483,10 +2530,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
           selectedFloor;
 
       const dateMatch = orderDate >= start && orderDate <= end;
-      let statusMatch =
-        order.status === "paid" ||
-        order.status === "completed" ||
-        order.status === "cancelled";
+      let statusMatch = order.status === "paid" || order.status === "completed";
       if (orderStatusFilter !== "all") {
         if (orderStatusFilter == "completed") {
           statusMatch = order.status === "paid" || order.status === "completed";
@@ -2623,14 +2667,12 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
       // Use EXACT values from database
       let orderSubtotal = Number(order.subtotal || 0); // Thành tiền từ DB
       let orderDiscount = Number(order.discount || 0); // Giảm giá từ DB
-      let orderTax =
-        Number(order.tax || 0) ||
-        Number(order.total || 0) - Number(order.subtotal || 0); // Thuế từ DB hoặc tính từ total-subtotal
+      let orderTax = Number(order.tax || 0); // Thuế từ DB hoặc tính từ total-subtotal
       let orderTotal = Number(order.total || 0); // Tổng tiền từ DB
       let orderRevenue = orderSubtotal - orderDiscount; // Doanh thu = thành tiền - giêm giá
 
       if (order.priceIncludeTax === true) {
-        orderSubtotal = orderSubtotal + orderDiscount + orderTax; // Thành tiền = subtotal + discount + tax
+        orderSubtotal = orderSubtotal + orderTax; // Thành tiền = subtotal + discount + tax
         orderRevenue = orderSubtotal - orderDiscount - orderTax; // Doanh thu = subtotal + tax
         orderTotal = orderRevenue + orderTax;
       } else {
@@ -2638,7 +2680,10 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
       }
 
       const orderSummary = {
-        orderDate: order.orderedAt || order.createdAt || order.created_at,
+        orderDate:
+          generalSettings?.isActive === false
+            ? order.updatedAt
+            : order.createdAt,
         orderNumber: order.orderNumber || `ORD-${order.id}`,
         customerId: order.customerId || "",
         customerName: order.customerName || "",
@@ -2690,11 +2735,11 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
                   orderSubtotal > 0 ? itemTotal / orderSubtotal : 0; // Avoid division by zero
                 const itemDiscount = orderDiscount * itemDiscountRatio; // Giảm giá theo tỷ lệ
                 let itemTax = orderTax * itemDiscountRatio; // Thuế theo tỷ lệ
-                let itemRevenue = itemTotal - itemDiscount; // Doanh thu = thành tiền - giảm giá
+                let itemRevenue = itemTotal; // Doanh thu = thành tiền - giảm giá
                 let itemTotalMoney = itemRevenue + itemTax; // Tổng tiền = doanh thu + thuế
 
                 if (order.priceIncludeTax === true) {
-                  itemRevenue = itemTotal - itemDiscount - itemTax;
+                  itemRevenue = itemTotal - itemTax;
                   itemTotalMoney = itemRevenue + itemTax;
                 }
 
@@ -4645,8 +4690,8 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
           orderRevenue - orderDiscount - orderTax;
       } else {
         // When priceIncludeTax = false: doanh thu = subtotal - discount
-        orderRevenue = Math.max(0, orderSubtotal - orderDiscount);
-        customerSales[customerId].totalAmount += orderSubtotal - orderDiscount;
+        orderRevenue = Math.max(0, orderSubtotal);
+        customerSales[customerId].totalAmount += orderSubtotal;
       }
       customerSales[customerId].revenue += orderRevenue;
 
@@ -6184,13 +6229,10 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
                     "Đơn vị tính": t("common.perUnit"),
                     "Sn lượng bán": product.quantity,
                     "Thành tiền": formatCurrency(
-                      (product.unitPrice || 0) * (product.quantity || 1),
+                      product.total + (product.discount || 0),
                     ),
                     "Giảm giá": formatCurrency(product.discount),
-                    "Doanh thu": formatCurrency(
-                      (product.unitPrice || 0) * (product.quantity || 1) -
-                        (product.discount || 0),
-                    ),
+                    "Doanh thu": formatCurrency(product.total),
                     "Nhóm hàng": product.categoryName,
                   })),
                   // Add summary row
@@ -6199,11 +6241,11 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
                     "Tên hàng": `${totalProducts} sản phẩm`,
                     "Đơn vị tính": "-",
                     "Số l>ợng bán": totalQuantity,
-                    "Thành tiền": formatCurrency(totalRevenue),
-                    "Giảm giá": formatCurrency(totalDiscount),
-                    "Doanh thu": formatCurrency(
-                      (totalRevenue || 0) - (totalDiscount || 0),
+                    "Thành tiền": formatCurrency(
+                      totalRevenue + (totalDiscount || 0),
                     ),
+                    "Giảm giá": formatCurrency(totalDiscount),
+                    "Doanh thu": formatCurrency(totalRevenue || 0),
                     "Nhóm hàng": "-",
                   },
                 ];
@@ -6294,7 +6336,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
                         </TableCell>
                         <TableCell className="text-right font-semibold">
                           {formatCurrency(
-                            (product.unitPrice || 0) * (product.quantity || 1),
+                            product.total + (product.discount || 0),
                           )}
                         </TableCell>
                         {analysisType !== "employee" && (
@@ -6303,10 +6345,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
                           </TableCell>
                         )}
                         <TableCell className="text-right font-semibold text-green-600">
-                          {formatCurrency(
-                            (product.unitPrice || 0) * (product.quantity || 1) -
-                              (product.discount || 0),
-                          )}
+                          {formatCurrency(product.total)}
                         </TableCell>
                         <TableCell className="text-center">
                           {product.categoryName}
@@ -6342,7 +6381,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-bold text-blue-600">
-                        {formatCurrency(totalRevenue)}
+                        {formatCurrency(totalRevenue + (totalDiscount || 0))}
                       </TableCell>
                       {analysisType !== "employee" && (
                         <TableCell className="text-right font-bold text-red-600">
@@ -6350,9 +6389,7 @@ export function SalesChartReport({ isAdmin }: { isAdmin?: boolean }) {
                         </TableCell>
                       )}
                       <TableCell className="text-right font-bold text-green-600">
-                        {formatCurrency(
-                          (totalRevenue || 0) - (totalDiscount || 0),
-                        )}
+                        {formatCurrency(totalRevenue || 0)}
                       </TableCell>
                       <TableCell className="text-center font-bold">
                         {" "}

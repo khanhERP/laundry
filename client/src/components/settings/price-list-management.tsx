@@ -49,12 +49,10 @@ const formatCurrency = (value: string | number): string => {
   const numValue = typeof value === "string" ? parseFloat(value) : value;
   if (isNaN(numValue)) return "0";
   // Format: dấu phẩy (,) ngăn cách hàng nghìn, dấu chấm (.) ngăn cách thập phân
-  return numValue
-    .toLocaleString("en-US", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    })
-    .replace(/,/g, ","); // Giữ dấu phẩy cho hàng nghìn
+  return numValue.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
 };
 
 interface PriceList {
@@ -154,13 +152,124 @@ export function PriceListManagement() {
     },
   });
 
-  // Filter stores based on user permission
-  const availableStores = isAdmin
-    ? allStores.filter((store: any) => store.typeUser !== 1)
-    : allStores.filter(
-        (store: any) =>
-          store.typeUser !== 1 && userStoreCodes.includes(store.storeCode),
-      );
+  // Fetch price lists first (needed by availableStores)
+  const { data: priceLists = [], isLoading: priceListsLoading } = useQuery({
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists");
+      if (!response.ok) throw new Error("Failed to fetch price lists");
+      return response.json();
+    },
+  });
+
+  // Filter stores based on user permission and price list validity
+  const availableStores = useMemo(() => {
+    const baseStores = isAdmin
+      ? allStores.filter((store: any) => store.typeUser !== 1)
+      : allStores.filter(
+          (store: any) =>
+            store.typeUser !== 1 && userStoreCodes.includes(store.storeCode),
+        );
+
+    if (!isDialogOpen) {
+      return baseStores;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // If editing, include stores currently applied to this price list
+    const currentlyAppliedStores = editingPriceList?.storeCode
+      ? editingPriceList.storeCode.split(",").map((s: string) => s.trim())
+      : [];
+
+    // Filter out stores that have active price lists
+    return baseStores.filter((store: any) => {
+      // Find all price lists for this store (excluding current editing price list)
+      const storePriceLists = priceLists.filter((pl: PriceList) => {
+        // Skip the current editing price list
+        if (editingPriceList && pl.id === editingPriceList.id) {
+          return false;
+        }
+        
+        if (!pl.storeCode) return false;
+        const storeCodes = pl.storeCode.split(",").map((s: string) => s.trim());
+        return storeCodes.includes(store.storeCode);
+      });
+
+      // If store is currently applied to the editing price list
+      if (editingPriceList && currentlyAppliedStores.includes(store.storeCode)) {
+        // Only show if this store is NOT being used by any other active price list
+        if (storePriceLists.length > 0) {
+          // Check if any of those price lists are still active
+          const hasOtherActivePriceList = storePriceLists.some((pl: PriceList) => {
+            // If price list has no validTo date, it's permanently active
+            if (!pl.validTo) {
+              return true;
+            }
+
+            const plValidTo = new Date(pl.validTo);
+            plValidTo.setHours(0, 0, 0, 0);
+
+            // If validTo is today or in the future, the price list is still active
+            return plValidTo >= today;
+          });
+
+          // Don't show this store if it's being used by another active price list
+          if (hasOtherActivePriceList) {
+            return false;
+          }
+        }
+        // Show store if it's only applied to current editing price list
+        return true;
+      }
+
+      // For stores not currently applied to editing price list
+      // If no price lists exist for this store, it's available
+      if (storePriceLists.length === 0) {
+        return true;
+      }
+
+      // Check if store has any active price list that is still valid
+      const hasActivePriceList = storePriceLists.some((pl: PriceList) => {
+        // If price list has no validTo date, it's permanently active
+        if (!pl.validTo) {
+          return true;
+        }
+
+        const plValidTo = new Date(pl.validTo);
+        plValidTo.setHours(0, 0, 0, 0);
+
+        // If validTo is today or in the future, the price list is still active
+        return plValidTo >= today;
+      });
+
+      // Additionally, if user has specified dates, check for overlap
+      if (priceListForm.validFrom && priceListForm.validTo) {
+        const formValidFrom = new Date(priceListForm.validFrom);
+        const formValidTo = new Date(priceListForm.validTo);
+
+        const hasOverlap = storePriceLists.some((pl: PriceList) => {
+          // Skip price lists without dates
+          if (!pl.validFrom || !pl.validTo) {
+            return false;
+          }
+
+          const plValidFrom = new Date(pl.validFrom);
+          const plValidTo = new Date(pl.validTo);
+
+          // Check for date range overlap
+          return formValidFrom <= plValidTo && formValidTo >= plValidFrom;
+        });
+
+        // Store is NOT available if it has active price list OR overlap
+        return !hasActivePriceList && !hasOverlap;
+      }
+
+      // Store is available only if it doesn't have active price list
+      return !hasActivePriceList;
+    });
+  }, [isAdmin, allStores, userStoreCodes, isDialogOpen, priceListForm.validFrom, priceListForm.validTo, priceLists, editingPriceList]);
 
   // Fetch next price list code
   const { data: nextCodeData } = useQuery({
@@ -182,16 +291,6 @@ export function PriceListManagement() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-
-  // Fetch price lists
-  const { data: priceLists = [], isLoading: priceListsLoading } = useQuery({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists");
-      if (!response.ok) throw new Error("Failed to fetch price lists");
-      return response.json();
-    },
-  });
 
   // Filter price lists based on store filter
   const filteredPriceLists = useMemo(() => {
@@ -647,6 +746,12 @@ export function PriceListManagement() {
           ...product,
           prices,
         };
+      })
+      // Sort by product createdAt descending (newest first)
+      .sort((a: any, b: any) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA; // DESC order
       });
 
     return result;
@@ -754,9 +859,15 @@ export function PriceListManagement() {
       }
     },
     onSuccess: async () => {
-      // Chỉ invalidate một lần, không refetch ngay
-      queryClient.invalidateQueries({
+      // Invalidate và refetch ngay để hiển thị sản phẩm mới
+      await queryClient.invalidateQueries({
         queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
+      });
+      
+      // Refetch để cập nhật UI ngay lập tức
+      await queryClient.refetchQueries({
+        queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
+        exact: true,
       });
 
       setShowProductSelector(false);
@@ -1369,13 +1480,19 @@ export function PriceListManagement() {
                         <tr>
                           <th
                             scope="col"
-                            className="sticky left-0 z-30 bg-gradient-to-r from-gray-100 to-gray-50 px-2 py-4 text-left text-sm font-bold text-gray-700 tracking-wider min-w-[120px] w-[120px] border-r-2 border-gray-300 shadow-sm whitespace-normal leading-tight"
+                            className="sticky left-0 z-30 bg-gradient-to-r from-gray-100 to-gray-50 px-2 py-4 text-center text-sm font-bold text-gray-700 tracking-wider min-w-[60px] w-[60px] border-r-2 border-gray-300 shadow-sm whitespace-normal leading-tight"
+                          >
+                            STT
+                          </th>
+                          <th
+                            scope="col"
+                            className="sticky left-[60px] z-30 bg-gradient-to-r from-gray-100 to-gray-50 px-2 py-4 text-left text-sm font-bold text-gray-700 tracking-wider min-w-[120px] w-[120px] border-r-2 border-gray-300 shadow-sm whitespace-normal leading-tight"
                           >
                             {t("settings.productCode")}
                           </th>
                           <th
                             scope="col"
-                            className="sticky left-[120px] z-30 bg-gradient-to-r from-gray-100 to-gray-50 px-2 py-4 text-left text-sm font-bold text-gray-700 tracking-wider min-w-[250px] w-[250px] border-r-2 border-gray-400 shadow-sm whitespace-normal leading-tight"
+                            className="sticky left-[180px] z-30 bg-gradient-to-r from-gray-100 to-gray-50 px-2 py-4 text-left text-sm font-bold text-gray-700 tracking-wider min-w-[250px] w-[250px] border-r-2 border-gray-400 shadow-sm whitespace-normal leading-tight"
                           >
                             {t("settings.productName")}
                           </th>
@@ -1414,7 +1531,7 @@ export function PriceListManagement() {
                         {selectedPriceLists.length === 0 ? (
                           <tr>
                             <td
-                              colSpan={3 + selectedPriceLists.length}
+                              colSpan={4 + selectedPriceLists.length}
                               className="px-4 py-8 text-center text-gray-500"
                             >
                               {t("settings.selectPriceListFirst")}
@@ -1423,7 +1540,7 @@ export function PriceListManagement() {
                         ) : paginatedProducts.length === 0 ? (
                           <tr>
                             <td
-                              colSpan={3 + selectedPriceLists.length}
+                              colSpan={4 + selectedPriceLists.length}
                               className="px-4 py-8 text-center text-gray-500"
                             >
                               {t("settings.noProductsInPriceList")}
@@ -1438,14 +1555,21 @@ export function PriceListManagement() {
                               }`}
                             >
                               <td
-                                className={`sticky left-0 z-10 px-2 py-3 whitespace-nowrap text-xs font-mono font-semibold border-r-2 border-gray-300 min-w-[120px] w-[120px] ${
+                                className={`sticky left-0 z-10 px-2 py-3 whitespace-nowrap text-xs font-semibold text-center border-r-2 border-gray-300 min-w-[60px] w-[60px] ${
+                                  rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                }`}
+                              >
+                                {(currentPage - 1) * pageSize + rowIndex + 1}
+                              </td>
+                              <td
+                                className={`sticky left-[60px] z-10 px-2 py-3 whitespace-nowrap text-xs font-mono font-semibold border-r-2 border-gray-300 min-w-[120px] w-[120px] ${
                                   rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
                                 }`}
                               >
                                 {product.sku}
                               </td>
                               <td
-                                className={`sticky left-[120px] z-10 px-2 py-3 text-sm border-r-2 border-gray-400 min-w-[200px] w-[200px] ${
+                                className={`sticky left-[180px] z-10 px-2 py-3 text-sm border-r-2 border-gray-400 min-w-[200px] w-[200px] ${
                                   rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
                                 }`}
                               >
@@ -1488,32 +1612,41 @@ export function PriceListManagement() {
                                       }`}
                                     >
                                       <Input
-                                        type="number"
-                                        value={currentValue}
+                                        type="text"
+                                        value={
+                                          currentValue
+                                            ? formatCurrency(currentValue)
+                                            : ""
+                                        }
                                         data-price-input={`${product.id}-${colIndex}`}
-                                        onChange={(e) =>
+                                        onChange={(e) => {
+                                          // Allow numbers and dot for decimal
+                                          const rawValue = e.target.value.replace(/[^0-9.]/g, "");
                                           handlePriceInputChange(
                                             priceListId,
                                             product.id,
-                                            e.target.value,
-                                          )
-                                        }
-                                        onBlur={(e) =>
+                                            rawValue,
+                                          );
+                                        }}
+                                        onBlur={(e) => {
+                                          // Allow numbers and dot for decimal
+                                          const rawValue = e.target.value.replace(/[^0-9.]/g, "");
                                           handlePriceSave(
                                             priceListId,
                                             product.id,
-                                            e.target.value,
-                                          )
-                                        }
+                                            rawValue,
+                                          );
+                                        }}
                                         onKeyDown={(e) => {
                                           if (e.key === "Enter") {
                                             e.preventDefault();
 
-                                            // Save current value
+                                            // Save current value - allow decimal
+                                            const rawValue = e.currentTarget.value.replace(/[^0-9.]/g, "");
                                             handlePriceSave(
                                               priceListId,
                                               product.id,
-                                              e.currentTarget.value,
+                                              rawValue,
                                             );
 
                                             // Move to next cell
@@ -1562,8 +1695,6 @@ export function PriceListManagement() {
                                           }
                                         }}
                                         className="text-right w-full"
-                                        min="0"
-                                        step="1000"
                                         disabled={!canEdit}
                                         title={
                                           !canEdit
