@@ -144,6 +144,8 @@ export const storeSettings = pgTable("store_settings", {
   defaultZone: text("default_zone").default("A"),
   floorPrefix: text("floor_prefix").default("층"),
   zonePrefix: text("zone_prefix").default("구역"),
+  isEdit: boolean("is_edit").notNull().default(false),
+  isCancelled: boolean("is_cancelled").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
@@ -526,6 +528,8 @@ export const insertStoreSettingsSchema = createInsertSchema(storeSettings)
     defaultFloor: z.string().optional().default("1"),
     enableMultiFloor: z.boolean().optional().default(false),
     floorPrefix: z.string().optional().default("층"),
+    isEdit: z.boolean().optional().default(false),
+    isCancelled: z.boolean().optional().default(false),
   });
 
 export const insertSupplierSchema = createInsertSchema(suppliers)
