@@ -129,19 +129,25 @@ export function ChangeHistoryReport() {
               <Label className="text-sm font-medium mb-2 text-gray-700">
                 Cửa hàng
               </Label>
-              <Select value={storeFilter} onValueChange={setStoreFilter}>
+              <Select value={storeFilter || undefined} onValueChange={setStoreFilter}>
                 <SelectTrigger className="h-10">
                   <SelectValue placeholder="Chọn cửa hàng" />
                 </SelectTrigger>
                 <SelectContent>
-                  {storesData.length > 1 && (
+                  {storesData?.length > 1 && (
                     <SelectItem value="all">Tất cả</SelectItem>
                   )}
-                  {storesData.map((store: any) => (
-                    <SelectItem key={store.id} value={store.storeCode}>
-                      {store.storeName}
-                    </SelectItem>
-                  ))}
+
+                  {storesData
+                    ?.filter((store: any) => store?.storeCode) // chỉ lấy store có storeCode hợp lệ
+                    .map((store: any) => (
+                      <SelectItem
+                        key={store.id || store.storeCode}
+                        value={store.storeCode}
+                      >
+                        {store.storeName || "Không rõ tên"}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
