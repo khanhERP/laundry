@@ -154,7 +154,7 @@ export function SpendingReport() {
       queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range", startDate, endDate, storeFilter],
       queryFn: async () => {
         const params = new URLSearchParams();
-        if (storeFilter !== "all") params.append("storeCode", storeFilter);
+        if (storeFilter !== "all") params.append("storeFilter", storeFilter);
   
         const response = await fetch(
           `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range/${startDate}/${endDate}/all?${params.toString()}`,
