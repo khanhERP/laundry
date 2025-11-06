@@ -150,21 +150,19 @@ export function SpendingReport() {
     });
 
   // Fetch orders for revenue calculation
-  const { data: orders = [], refetch: refetchOrders } = useQuery({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range", startDate, endDate, storeFilter],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (startDate) params.append("startDate", startDate);
-      if (endDate) params.append("endDate", endDate);
-      if (storeFilter !== "all") params.append("storeCode", storeFilter);
-
-      const response = await fetch(
-        `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range?${params.toString()}`,
-      );
-      if (!response.ok) throw new Error("Failed to fetch orders");
-      return response.json();
-    },
-  });
+    const { data: orders = [], refetch: refetchOrders } = useQuery({
+      queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range", startDate, endDate, storeFilter],
+      queryFn: async () => {
+        const params = new URLSearchParams();
+        if (storeFilter !== "all") params.append("storeCode", storeFilter);
+  
+        const response = await fetch(
+          `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range/${startDate}/${endDate}/all?${params.toString()}`,
+        );
+        if (!response.ok) throw new Error("Failed to fetch orders");
+        return response.json();
+      },
+    });
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
