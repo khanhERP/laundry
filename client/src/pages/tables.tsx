@@ -69,8 +69,8 @@ export default function TablesPage({ onLogout }: TablesPageProps) {
 
               // Clear cache and force refresh
               queryClient.clear();
-              queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/tables"] });
-              queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders"] });
+              queryClient.invalidateQueries({ queryKey: ["https://laundry-be-admin.onrender.com/api/tables"] });
+              queryClient.invalidateQueries({ queryKey: ["https://laundry-be-admin.onrender.com/api/orders"] });
 
               // Dispatch custom events for TableGrid component
               window.dispatchEvent(
@@ -117,8 +117,8 @@ export default function TablesPage({ onLogout }: TablesPageProps) {
 
       // Force data refresh for any e-invoice related events
       queryClient.clear();
-      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/tables"] });
-      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["https://laundry-be-admin.onrender.com/api/tables"] });
+      queryClient.invalidateQueries({ queryKey: ["https://laundry-be-admin.onrender.com/api/orders"] });
 
       // Dispatch refresh event for TableGrid
       window.dispatchEvent(

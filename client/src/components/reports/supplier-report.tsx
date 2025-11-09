@@ -44,17 +44,17 @@ export function SupplierReport() {
   const [debtTo, setDebtTo] = useState<string>("");
 
   const { data: suppliers } = useQuery({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/suppliers"],
+    queryKey: ["https://laundry-be-admin.onrender.com/api/suppliers"],
   });
 
   const { data: purchaseReceipts } = useQuery({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/purchase-receipts"],
+    queryKey: ["https://laundry-be-admin.onrender.com/api/purchase-receipts"],
     enabled: concernType === "purchase" || concernType === "purchaseBySupplier",
   });
 
   // Sử dụng purchase receipts làm nguồn dữ liệu cho debt report
   const { data: supplierDebts } = useQuery({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/purchase-receipts"],
+    queryKey: ["https://laundry-be-admin.onrender.com/api/purchase-receipts"],
     enabled: concernType === "debt",
   });
 
