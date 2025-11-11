@@ -104,26 +104,26 @@ export function StoreSettingsContent() {
 
   // Fetch current store settings to check isAdmin
   const { data: storeSettings } = useQuery({
-    queryKey: ["https://laundry-be-admin.onrender.com/api/store-settings"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings"],
   });
 
   const isAdmin = storeSettings?.isAdmin || false;
 
   // Fetch stores with typeUser = 0
   const { data: stores = [], isLoading } = useQuery<StoreData[]>({
-    queryKey: ["https://laundry-be-admin.onrender.com/api/store-settings/list"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list"],
     select: (data) => data.filter((store) => store.typeUser === 0),
   });
 
   // Fetch price lists
   const { data: priceLists = [] } = useQuery({
-    queryKey: ["https://laundry-be-admin.onrender.com/api/price-lists"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-lists"],
   });
 
   // Create mutation
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const response = await fetch("https://laundry-be-admin.onrender.com/api/store-settings/create", {
+      const response = await fetch("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -136,7 +136,7 @@ export function StoreSettingsContent() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["https://laundry-be-admin.onrender.com/api/store-settings/list"] });
+      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list"] });
       toast({
         title: "Thành công",
         description: "Tạo cửa hàng mới thành công",
@@ -155,7 +155,7 @@ export function StoreSettingsContent() {
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: typeof formData }) => {
-      const response = await fetch(`https://laundry-be-admin.onrender.com/api/store-settings/${id}`, {
+      const response = await fetch(`https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -168,7 +168,7 @@ export function StoreSettingsContent() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["https://laundry-be-admin.onrender.com/api/store-settings/list"] });
+      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list"] });
       toast({
         title: "Thành công",
         description: "Cập nhật cửa hàng thành công",
@@ -187,7 +187,7 @@ export function StoreSettingsContent() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await fetch(`https://laundry-be-admin.onrender.com/api/store-settings/${id}`, {
+      const response = await fetch(`https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -197,7 +197,7 @@ export function StoreSettingsContent() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["https://laundry-be-admin.onrender.com/api/store-settings/list"] });
+      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list"] });
       toast({ title: "Thành công", description: "Xóa cửa hàng thành công" });
       setDeleteConfirm(null);
     },
