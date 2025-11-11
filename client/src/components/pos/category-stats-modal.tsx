@@ -20,14 +20,14 @@ export function CategoryStatsModal({ isOpen, onClose }: CategoryStatsModalProps)
 
   // Fetch categories
   const { data: categoriesData } = useQuery<any[]>({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/categories"],
+    queryKey: ["https://laundry-be-admin.onrender.com/api/categories"],
   });
 
   // Fetch products
   const { data: productsData } = useQuery<any[]>({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products", { includeInactive: true }],
+    queryKey: ["https://laundry-be-admin.onrender.com/api/products", { includeInactive: true }],
     queryFn: async () => {
-      const response = await fetch("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products?includeInactive=true");
+      const response = await fetch("https://laundry-be-admin.onrender.com/api/products?includeInactive=true");
       if (!response.ok) throw new Error("Failed to fetch products");
       return response.json();
     },

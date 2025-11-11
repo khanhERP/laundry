@@ -57,23 +57,23 @@ export function InventoryReport() {
   const [selectedCategory, setSelectedCategory] = useState("all");
 
   const { data: products } = useQuery({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products"],
+    queryKey: ["https://laundry-be-admin.onrender.com/api/products"],
   });
 
   const { data: categories } = useQuery({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/categories"],
+    queryKey: ["https://laundry-be-admin.onrender.com/api/categories"],
   });
 
   const { data: orders } = useQuery({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders"],
+    queryKey: ["https://laundry-be-admin.onrender.com/api/orders"],
   });
 
   const { data: employees } = useQuery({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/employees"],
+    queryKey: ["https://laundry-be-admin.onrender.com/api/employees"],
   });
 
   const { data: suppliers } = useQuery({
-    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/suppliers"],
+    queryKey: ["https://laundry-be-admin.onrender.com/api/suppliers"],
   });
 
   const formatCurrency = (amount: number) => {
@@ -1489,8 +1489,8 @@ export function InventoryReport() {
 const fetchInventoryData = async () => {
     try {
       const [productsResponse, categoriesResponse] = await Promise.all([
-        fetch('https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products'),
-        fetch('https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/categories')
+        fetch('https://laundry-be-admin.onrender.com/api/products'),
+        fetch('https://laundry-be-admin.onrender.com/api/categories')
       ]);
 
       if (!productsResponse.ok || !categoriesResponse.ok) {

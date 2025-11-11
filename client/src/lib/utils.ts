@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 const BASE_URL =
-  "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev"; // 👈 đổi theo domain backend của bạn
+  "https://laundry-be-admin.onrender.com"; // 👈 đổi theo domain backend của bạn
 
 export async function defaultFetcher({ queryKey }) {
   const [path] = queryKey;
