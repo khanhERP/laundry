@@ -85,7 +85,7 @@ export function PrinterSettingsContent() {
 
   // Fetch printer configs
   const { data: printers = [], isLoading } = useQuery<PrinterConfig[]>({
-    queryKey: ["https://laundry-be-admin.onrender.com/api/printer-configs"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/printer-configs"],
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   });
@@ -93,11 +93,11 @@ export function PrinterSettingsContent() {
   // Create mutation
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "https://laundry-be-admin.onrender.com/api/printer-configs", data);
+      const response = await apiRequest("POST", "https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/printer-configs", data);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["https://laundry-be-admin.onrender.com/api/printer-configs"] });
+      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/printer-configs"] });
       toast({ title: "Thành công", description: "Đã thêm cấu hình máy in" });
       handleCloseDialog();
     },
@@ -113,11 +113,11 @@ export function PrinterSettingsContent() {
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      const response = await apiRequest("PUT", `https://laundry-be-admin.onrender.com/api/printer-configs/${id}`, data);
+      const response = await apiRequest("PUT", `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/printer-configs/${id}`, data);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["https://laundry-be-admin.onrender.com/api/printer-configs"] });
+      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/printer-configs"] });
       toast({ title: "Thành công", description: "Đã cập nhật cấu hình máy in" });
       handleCloseDialog();
     },
@@ -133,10 +133,10 @@ export function PrinterSettingsContent() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `https://laundry-be-admin.onrender.com/api/printer-configs/${id}`);
+      await apiRequest("DELETE", `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/printer-configs/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["https://laundry-be-admin.onrender.com/api/printer-configs"] });
+      queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/printer-configs"] });
       toast({ title: "Thành công", description: "Đã xóa cấu hình máy in" });
     },
     onError: () => {
@@ -151,12 +151,12 @@ export function PrinterSettingsContent() {
   // Toggle status mutation
   const toggleStatusMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiRequest("PATCH", `https://laundry-be-admin.onrender.com/api/printer-configs/${id}/toggle-status`);
+      const response = await apiRequest("PATCH", `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/printer-configs/${id}/toggle-status`);
       return response.json();
     },
     onSuccess: async () => {
       await queryClient.refetchQueries({ 
-        queryKey: ["https://laundry-be-admin.onrender.com/api/printer-configs"],
+        queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/printer-configs"],
         type: 'active'
       });
       toast({ title: "Thành công", description: "Đã thay đổi trạng thái máy in" });
@@ -189,12 +189,12 @@ export function PrinterSettingsContent() {
         floor: printer.floor,
         zone: printer.zone,
       };
-      const response = await apiRequest("PUT", `https://laundry-be-admin.onrender.com/api/printer-configs/${id}`, updateData);
+      const response = await apiRequest("PUT", `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/printer-configs/${id}`, updateData);
       return response.json();
     },
     onSuccess: async () => {
       await queryClient.refetchQueries({ 
-        queryKey: ["https://laundry-be-admin.onrender.com/api/printer-configs"],
+        queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/printer-configs"],
         type: 'active'
       });
       toast({ title: "Thành công", description: "Đã cập nhật trạng thái in nhân viên" });
@@ -227,12 +227,12 @@ export function PrinterSettingsContent() {
         floor: printer.floor,
         zone: printer.zone,
       };
-      const response = await apiRequest("PUT", `https://laundry-be-admin.onrender.com/api/printer-configs/${id}`, updateData);
+      const response = await apiRequest("PUT", `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/printer-configs/${id}`, updateData);
       return response.json();
     },
     onSuccess: async () => {
       await queryClient.refetchQueries({ 
-        queryKey: ["https://laundry-be-admin.onrender.com/api/printer-configs"],
+        queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/printer-configs"],
         type: 'active'
       });
       toast({ title: "Thành công", description: "Đã cập nhật trạng thái in bếp" });

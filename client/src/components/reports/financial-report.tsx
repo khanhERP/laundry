@@ -79,10 +79,10 @@ export function FinancialReport() {
 
   // Query orders and transactions for financial calculations
   const { data: orders = [] } = useQuery({
-    queryKey: ["https://laundry-be-admin.onrender.com/api/orders"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders"],
     queryFn: async () => {
       try {
-        const response = await fetch("https://laundry-be-admin.onrender.com/api/orders");
+        const response = await fetch("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders");
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
         return Array.isArray(data) ? data : [];
@@ -94,10 +94,10 @@ export function FinancialReport() {
   });
 
   const { data: transactions = [] } = useQuery({
-    queryKey: ["https://laundry-be-admin.onrender.com/api/transactions"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/transactions"],
     queryFn: async () => {
       try {
-        const response = await fetch("https://laundry-be-admin.onrender.com/api/transactions");
+        const response = await fetch("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/transactions");
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
         return Array.isArray(data) ? data : [];
@@ -109,10 +109,10 @@ export function FinancialReport() {
   });
 
   const { data: invoices = [] } = useQuery({
-    queryKey: ["https://laundry-be-admin.onrender.com/api/invoices"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/invoices"],
     queryFn: async () => {
       try {
-        const response = await fetch("https://laundry-be-admin.onrender.com/api/invoices");
+        const response = await fetch("https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/invoices");
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
         return Array.isArray(data) ? data : [];

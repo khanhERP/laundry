@@ -114,7 +114,7 @@ function MenuReport() {
 
   // Fetch stores list for filter dropdown
   const { data: storesData = [] } = useQuery({
-    queryKey: ["https://laundry-be-admin.onrender.com/api/store-settings/list"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings/list"],
     retry: 2,
   });
 
@@ -125,19 +125,19 @@ function MenuReport() {
 
   // Query store settings for priceIncludeTax
   const { data: storeSettings } = useQuery({
-    queryKey: ["https://laundry-be-admin.onrender.com/api/store-settings"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/store-settings"],
     retry: 2,
   });
 
   // Query categories
   const { data: categories = [] } = useQuery({
-    queryKey: ["https://laundry-be-admin.onrender.com/api/categories"],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/categories"],
     retry: 2,
   });
 
   // Query products - filter by search term
   const { data: products = [] } = useQuery({
-    queryKey: ["https://laundry-be-admin.onrender.com/api/products", selectedCategory, productType, productSearch],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/products", selectedCategory, productType, productSearch],
     retry: 2,
     enabled: true, // Always enabled to reload when productSearch changes
   });
@@ -149,7 +149,7 @@ function MenuReport() {
     error: analysisError,
     refetch,
   } = useQuery({
-    queryKey: ["https://laundry-be-admin.onrender.com/api/menu-analysis", startDate, endDate, selectedCategory, productSearch, storeFilter],
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/menu-analysis", startDate, endDate, selectedCategory, productSearch, storeFilter],
     queryFn: async () => {
       try {
         const params = new URLSearchParams({
@@ -170,7 +170,7 @@ function MenuReport() {
 
         const response = await apiRequest(
           "GET",
-          `https://laundry-be-admin.onrender.com/api/menu-analysis?${params.toString()}`,
+          `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/menu-analysis?${params.toString()}`,
         );
         if (!response.ok) {
           console.error(
@@ -282,8 +282,8 @@ function MenuReport() {
 
   const handleRefresh = () => {
     // Refresh both orders and order items data
-    queryClient.invalidateQueries({ queryKey: ["https://laundry-be-admin.onrender.com/api/orders/date-range"] });
-    queryClient.invalidateQueries({ queryKey: ["https://laundry-be-admin.onrender.com/api/order-items"] });
+    queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range"] });
+    queryClient.invalidateQueries({ queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/order-items"] });
   };
 
   if (analysisError) {
