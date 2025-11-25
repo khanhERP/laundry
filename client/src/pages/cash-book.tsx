@@ -1601,9 +1601,9 @@ export default function CashBookPage({ onLogout }: CashBookPageProps) {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {paginatedData.map((transaction) => (
+                        {paginatedData.map((transaction, index) => (
                           <TableRow
-                            key={transaction.id}
+                            key={index}
                             className={
                               transaction.voucherType === "income_voucher" ||
                               transaction.voucherType === "expense_voucher"
