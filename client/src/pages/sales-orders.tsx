@@ -4148,8 +4148,7 @@ export default function SalesOrders() {
                               )}
                             </div>
                           </th>
-                          <th
-                            className="w-[150px] px-3 py-3 text-left font-medium text-[16px] text-gray-600 cursor-pointer hover:bg-gray-100">
+                          <th className="w-[150px] px-3 py-3 text-left font-medium text-[16px] text-gray-600 cursor-pointer hover:bg-gray-100">
                             <div className="leading-tight flex items-center gap-1">
                               {t("orders.storeName")}
                             </div>
@@ -4563,16 +4562,16 @@ export default function SalesOrders() {
                                           }
                                           className="p-0"
                                         >
-                                          <div className="p-4 border-l-4 border-blue-500 bg-gray-50">
-                                            <Card className="shadow-lg">
+                                            <div className="p-4 border-l-4 border-blue-500 bg-gray-50 w-full max-w-[1300px] overflow-x-auto">
+                                            <Card className="shadow-lg overflow-x-auto">
                                               <CardHeader className="pb-3">
                                                 <CardTitle className="text-lg text-blue-700">
                                                   {t("common.orderDetails")}
                                                 </CardTitle>
                                               </CardHeader>
-                                              <CardContent className="space-y-4">
-                                                <div className="bg-white p-4 rounded-lg overflow-x-auto">
-                                                  <div className="min-w-[1200px]">
+                                              <CardContent className="space-y-4 min-w-[1900px]">
+                                                <div className="bg-white p-4 rounded-lg">
+                                                  <div>
                                                     <table className="w-full text-base border-collapse">
                                                       <tbody>
                                                         <tr>
@@ -5100,8 +5099,8 @@ export default function SalesOrders() {
                                                       </p>
                                                     </div>
                                                   ) : (
-                                                    <div className="border rounded-lg overflow-x-auto">
-                                                      <table className="w-full text-sm min-w-[1200px]">
+                                                    <div className="border rounded-lg">
+                                                      <table className="w-full text-sm">
                                                         <thead>
                                                           <tr className="bg-gray-50 border-b">
                                                             <th className="border-r px-2 py-2 font-medium text-base text-left sticky left-0 bg-green-50 z-10 w-12">
