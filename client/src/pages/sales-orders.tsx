@@ -4562,7 +4562,7 @@ export default function SalesOrders() {
                                           }
                                           className="p-0"
                                         >
-                                            <div className="p-4 border-l-4 border-blue-500 bg-gray-50 w-full max-w-[1300px] overflow-x-auto">
+                                            <div className="p-4 border-l-4 border-blue-500 bg-gray-50 w-full max-w-[1100px] overflow-x-auto">
                                             <Card className="shadow-lg overflow-x-auto">
                                               <CardHeader className="pb-3">
                                                 <CardTitle className="text-lg text-blue-700">
