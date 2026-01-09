@@ -41,6 +41,9 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
     thisMonth: "Tháng này",
     lastMonth: "Tháng trước",
     custom: "Tùy chỉnh",
+    yesterday: "Hôm qua",
+    thisQuarter: "Quý này",
+    thisYear: "Năm này",
 
     // Dashboard metrics
     totalRevenue: "Tổng thu từ bán hàng",
@@ -591,6 +594,9 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
   ko: {
     title: "보고서",
     filter: "필터",
+    yesterday: "어제",
+    thisQuarter: "이번 분기",
+    thisYear: "올해",
     description: "판매 및 운영 보고서 보기",
     dashboard: "대시보드",
     dashboardDescription: "총 매출 및 운영 상태 대시보드",
@@ -1205,6 +1211,9 @@ export const reportsTranslations: { [key: string]: ReportsTranslations } = {
     thisMonth: "This Month",
     lastMonth: "Last Month",
     custom: "Custom",
+    yesterday: "Yesterday",
+    thisQuarter: "This Quarter",
+    thisYear: "This Year",
 
     // Dashboard metrics
     totalRevenue: "Total revenue from sales",

@@ -103,7 +103,7 @@ export function PriceListManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedPriceLists, setSelectedPriceLists] = useState<number[]>([]);
-  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
+  const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
   const [showProductSelector, setShowProductSelector] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -885,7 +885,7 @@ export function PriceListManagement() {
       });
 
       setShowProductSelector(false);
-      setSelectedProducts([]);
+      setSelectedProductIds([]);
       toast({
         title: "Thành công",
         description: "Thêm sản phẩm vào bảng giá thành công",
@@ -902,7 +902,7 @@ export function PriceListManagement() {
   });
 
   const handleAddProducts = () => {
-    if (selectedProducts.length === 0) {
+    if (selectedProductIds.length === 0) {
       toast({
         title: "Lỗi",
         description: "Vui lòng chọn ít nhất một sản phẩm",
@@ -910,7 +910,7 @@ export function PriceListManagement() {
       });
       return;
     }
-    addProductsMutation.mutate(selectedProducts);
+    addProductsMutation.mutate(selectedProductIds);
   };
 
   // Export to Excel
@@ -1267,21 +1267,21 @@ export function PriceListManagement() {
                     {t("settings.priceListCode")}: {priceList.code}
                   </p>
                 </div>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEdit(priceList);
-                    }}
-                    disabled={
-                      !isAdmin &&
-                      priceList.storeCode &&
-                      priceList.storeCode
-                        .split(",")
-                        .filter((s: string) => s.trim()).length > 1
-                    }
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(priceList);
+                        }}
+                        disabled={
+                          !!(!isAdmin &&
+                          priceList.storeCode &&
+                          priceList.storeCode
+                            .split(",")
+                            .filter((s: string) => s.trim()).length > 1)
+                        }
                     title={
                       !isAdmin &&
                       priceList.storeCode &&
@@ -1317,12 +1317,12 @@ export function PriceListManagement() {
                       handleDelete(priceList);
                     }}
                     disabled={
-                      priceList.isDefault ||
+                      !!(priceList.isDefault ||
                       (!isAdmin &&
                         priceList.storeCode &&
                         priceList.storeCode
                           .split(",")
-                          .filter((s: string) => s.trim()).length > 1)
+                          .filter((s: string) => s.trim()).length > 1))
                     }
                     title={
                       priceList.isDefault
@@ -1482,6 +1482,51 @@ export function PriceListManagement() {
                 <FileUp className="w-4 h-4 mr-2" />
                 {t("settings.importPriceList")}
               </Button>
+
+              {selectedProductIds.length > 0 && (
+                <Button
+                  onClick={async () => {
+                    if (!confirm(`Bạn có chắc muốn xóa ${selectedProductIds.length} sản phẩm đã chọn khỏi các bảng giá đang xem?`)) return;
+                    
+                    try {
+                      let totalSuccess = 0;
+                      for (const productId of selectedProductIds) {
+                        for (const priceListId of selectedPriceLists) {
+                          await deleteProductFromPriceListMutation.mutateAsync({
+                            priceListId,
+                            productId,
+                          });
+                          totalSuccess++;
+                        }
+                      }
+
+                      await queryClient.refetchQueries({
+                        queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/price-list-items", selectedPriceLists],
+                        exact: true,
+                      });
+
+                      setSelectedProductIds([]);
+                      toast({
+                        title: "Thành công",
+                        description: `Đã xóa các sản phẩm đã chọn khỏi bảng giá`,
+                      });
+                    } catch (error) {
+                      console.error("Error batch deleting products:", error);
+                      toast({
+                        title: "Lỗi",
+                        description: "Không thể xóa một số sản phẩm",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  variant="destructive"
+                  className="whitespace-nowrap"
+                  disabled={deleteProductFromPriceListMutation.isPending}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Xóa ({selectedProductIds.length})
+                </Button>
+              )}
             </div>
 
             {/* Products Table */}
@@ -1494,19 +1539,49 @@ export function PriceListManagement() {
                         <tr>
                           <th
                             scope="col"
-                            className="sticky left-0 z-30 bg-gradient-to-r from-gray-100 to-gray-50 px-2 py-4 text-center text-sm font-bold text-gray-700 tracking-wider min-w-[60px] w-[60px] border-r-2 border-gray-300 shadow-sm whitespace-normal leading-tight"
+                            className="sticky left-0 z-40 bg-gradient-to-r from-gray-100 to-gray-50 px-2 py-4 text-center text-sm font-bold text-gray-700 tracking-wider min-w-[50px] w-[50px] border-r-2 border-gray-300 shadow-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={
+                                paginatedProducts.length > 0 &&
+                                paginatedProducts.every((p) =>
+                                  selectedProductIds.includes(p.id)
+                                )
+                              }
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                              setSelectedProductIds((prev) => {
+                                  const currentIds = Array.from(prev);
+                                  const newSet = new Set(currentIds);
+                                  paginatedProducts.map(p => p.id).forEach(id => newSet.add(id));
+                                  return Array.from(newSet);
+                                });
+                                } else {
+                                  const currentIds = paginatedProducts.map((p) => p.id);
+                                  setSelectedProductIds((prev) =>
+                                    prev.filter((id) => !currentIds.includes(id))
+                                  );
+                                }
+                              }}
+                              className="w-4 h-4 cursor-pointer"
+                            />
+                          </th>
+                          <th
+                            scope="col"
+                            className="sticky left-[50px] z-30 bg-gradient-to-r from-gray-100 to-gray-50 px-2 py-4 text-center text-sm font-bold text-gray-700 tracking-wider min-w-[60px] w-[60px] border-r-2 border-gray-300 shadow-sm whitespace-normal leading-tight"
                           >
                             STT
                           </th>
                           <th
                             scope="col"
-                            className="sticky left-[60px] z-30 bg-gradient-to-r from-gray-100 to-gray-50 px-2 py-4 text-left text-sm font-bold text-gray-700 tracking-wider min-w-[120px] w-[120px] border-r-2 border-gray-300 shadow-sm whitespace-normal leading-tight"
+                            className="sticky left-[110px] z-30 bg-gradient-to-r from-gray-100 to-gray-50 px-2 py-4 text-left text-sm font-bold text-gray-700 tracking-wider min-w-[120px] w-[120px] border-r-2 border-gray-300 shadow-sm whitespace-normal leading-tight"
                           >
                             {t("settings.productCode")}
                           </th>
                           <th
                             scope="col"
-                            className="sticky left-[180px] z-30 bg-gradient-to-r from-gray-100 to-gray-50 px-2 py-4 text-left text-sm font-bold text-gray-700 tracking-wider min-w-[250px] w-[250px] border-r-2 border-gray-400 shadow-sm whitespace-normal leading-tight"
+                            className="sticky left-[230px] z-30 bg-gradient-to-r from-gray-100 to-gray-50 px-2 py-4 text-left text-sm font-bold text-gray-700 tracking-wider min-w-[250px] w-[250px] border-r-2 border-gray-400 shadow-sm whitespace-normal leading-tight"
                           >
                             {t("settings.productName")}
                           </th>
@@ -1545,7 +1620,7 @@ export function PriceListManagement() {
                         {selectedPriceLists.length === 0 ? (
                           <tr>
                             <td
-                              colSpan={4 + selectedPriceLists.length}
+                              colSpan={5 + selectedPriceLists.length}
                               className="px-4 py-8 text-center text-gray-500"
                             >
                               {t("settings.selectPriceListFirst")}
@@ -1554,7 +1629,7 @@ export function PriceListManagement() {
                         ) : paginatedProducts.length === 0 ? (
                           <tr>
                             <td
-                              colSpan={4 + selectedPriceLists.length}
+                              colSpan={5 + selectedPriceLists.length}
                               className="px-4 py-8 text-center text-gray-500"
                             >
                               {t("settings.noProductsInPriceList")}
@@ -1566,24 +1641,47 @@ export function PriceListManagement() {
                               key={product.id}
                               className={`hover:bg-blue-50 transition-colors ${
                                 rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
-                              }`}
+                              } ${selectedProductIds.includes(product.id) ? "bg-blue-50/50" : ""}`}
                             >
                               <td
-                                className={`sticky left-0 z-10 px-2 py-3 whitespace-nowrap text-xs font-semibold text-center border-r-2 border-gray-300 min-w-[60px] w-[60px] ${
+                                className={`sticky left-0 z-10 px-2 py-3 whitespace-nowrap text-center border-r-2 border-gray-300 min-w-[50px] w-[50px] ${
+                                  rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedProductIds.includes(product.id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedProductIds((prev) => [
+                                        ...prev,
+                                        product.id,
+                                      ]);
+                                    } else {
+                                      setSelectedProductIds((prev) =>
+                                        prev.filter((id) => id !== product.id)
+                                      );
+                                    }
+                                  }}
+                                  className="w-4 h-4 cursor-pointer"
+                                />
+                              </td>
+                              <td
+                                className={`sticky left-[50px] z-10 px-2 py-3 whitespace-nowrap text-xs font-semibold text-center border-r-2 border-gray-300 min-w-[60px] w-[60px] ${
                                   rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
                                 }`}
                               >
                                 {(currentPage - 1) * pageSize + rowIndex + 1}
                               </td>
                               <td
-                                className={`sticky left-[60px] z-10 px-2 py-3 whitespace-nowrap text-xs font-mono font-semibold border-r-2 border-gray-300 min-w-[120px] w-[120px] ${
+                                className={`sticky left-[110px] z-10 px-2 py-3 whitespace-nowrap text-xs font-mono font-semibold border-r-2 border-gray-300 min-w-[120px] w-[120px] ${
                                   rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
                                 }`}
                               >
                                 {product.sku}
                               </td>
                               <td
-                                className={`sticky left-[180px] z-10 px-2 py-3 text-sm border-r-2 border-gray-400 min-w-[200px] w-[200px] ${
+                                className={`sticky left-[230px] z-10 px-2 py-3 text-sm border-r-2 border-gray-400 min-w-[200px] w-[200px] ${
                                   rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
                                 }`}
                               >
@@ -2011,11 +2109,11 @@ export function PriceListManagement() {
                                 );
                               },
                             );
-                            setSelectedProducts(
+                            setSelectedProductIds(
                               availableProducts.map((p: Product) => p.id),
                             );
                           } else {
-                            setSelectedProducts([]);
+                            setSelectedProductIds([]);
                           }
                         }}
                         className="w-4 h-4"
@@ -2052,16 +2150,16 @@ export function PriceListManagement() {
                         <TableCell>
                           <input
                             type="checkbox"
-                            checked={selectedProducts.includes(product.id)}
+                            checked={selectedProductIds.includes(product.id)}
                             onChange={(e) => {
                               if (e.target.checked) {
-                                setSelectedProducts([
-                                  ...selectedProducts,
+                                setSelectedProductIds([
+                                  ...selectedProductIds,
                                   product.id,
                                 ]);
                               } else {
-                                setSelectedProducts(
-                                  selectedProducts.filter(
+                                setSelectedProductIds(
+                                  selectedProductIds.filter(
                                     (id) => id !== product.id,
                                   ),
                                 );
@@ -2120,7 +2218,7 @@ export function PriceListManagement() {
               variant="outline"
               onClick={() => {
                 setShowProductSelector(false);
-                setSelectedProducts([]);
+                setSelectedProductIds([]);
               }}
             >
               {t("common.cancel")}
@@ -2128,12 +2226,12 @@ export function PriceListManagement() {
             <Button
               onClick={handleAddProducts}
               disabled={
-                selectedProducts.length === 0 || addProductsMutation.isPending
+                selectedProductIds.length === 0 || addProductsMutation.isPending
               }
             >
               {addProductsMutation.isPending
                 ? t("settings.addingProducts")
-                : `${t("settings.addProducts")} ${selectedProducts.length} ${t("settings.productsCount")}`}
+                : `${t("settings.addProducts")} ${selectedProductIds.length} ${t("settings.productsCount")}`}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2265,8 +2363,8 @@ export function PriceListManagement() {
                     ? t("settings.enterPriceListName")
                     : t("settings.priceListCodeAutoGenerated")
                 }
-                required={editingPriceList}
-                disabled={editingPriceList}
+                required={editingPriceList !== null}
+                disabled={editingPriceList !== null}
                 className={
                   editingPriceList ? "bg-gray-100 cursor-not-allowed" : ""
                 }
@@ -2327,9 +2425,9 @@ export function PriceListManagement() {
                       <input
                         type="checkbox"
                         id={`store-${store.id}`}
-                        checked={priceListForm.storeCodes.includes(
+                        checked={!!(priceListForm.storeCodes.includes(
                           store.storeCode,
-                        )}
+                        ))}
                         onChange={(e) => {
                           if (e.target.checked) {
                             // Nếu không phải admin, chỉ cho chọn 1 chi nhánh

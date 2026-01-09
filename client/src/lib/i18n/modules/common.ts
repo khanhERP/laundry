@@ -5,6 +5,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
     loading: "로딩 중...",
     sku: "SKU",
     branch: "지점",
+    dateRange: "날짜 범위",
     storeAddress: "매장 주소",
     storePhone: "매장 전화번호",
     invoiceNo: "송장 번호",
@@ -721,6 +722,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
   en: {
     save: "Save",
     branch: "Branch",
+    dateRange: "Date Range",
     storeAddress: "Store Address",
     storePhone: "Store Phone",
     invoiceNo: "Invoice No.",
@@ -1338,6 +1340,7 @@ export const commonTranslations: { [key: string]: CommonTranslations } = {
   vi: {
     save: "Lưu",
     branch: "Chi nhánh",
+    dateRange: "Khoảng thời gian",
     storeAddress: "Địa chỉ cửa hàng",
     storePhone: "Số điện thoại cửa hàng",
     invoiceNo: "Số hóa đơn",

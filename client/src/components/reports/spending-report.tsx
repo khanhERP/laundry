@@ -34,15 +34,145 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 
 export function SpendingReport() {
-  const { t } = useTranslation();
-  const [startDate, setStartDate] = useState<string>(
-    new Date().toISOString().split("T")[0],
-  );
-  const [endDate, setEndDate] = useState<string>(
-    new Date().toISOString().split("T")[0],
-  );
+  const { t, currentLanguage } = useTranslation();
+
+  const [startDate, setStartDate] = useState(() => {
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    return firstDayOfMonth.toISOString().split("T")[0];
+  });
+  const [endDate, setEndDate] = useState(() => {
+    return new Date().toISOString().split("T")[0];
+  });
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [dateRange, setDateRange] = useState("today"); // "today", "thisWeek", "thisMonth", "lastMonth", "custom"
+
+  // Handle date range change
+  const handleDateRangeChange = (value: string) => {
+    setDateRange(value);
+    const today = new Date();
+
+    switch (value) {
+      case "today":
+        setStartDate(today.toISOString().split("T")[0]);
+        setEndDate(today.toISOString().split("T")[0]);
+        break;
+      case "yesterday":
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        setStartDate(yesterday.toISOString().split("T")[0]);
+        setEndDate(yesterday.toISOString().split("T")[0]);
+        break;
+      case "thisWeek":
+        const startOfWeek = new Date(today);
+        // Get day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+        const dayOfWeek = today.getDay();
+        // Calculate days to subtract to get to Monday (day 1)
+        // If Sunday (0), go back 6 days; otherwise go back (dayOfWeek - 1) days
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        startOfWeek.setDate(today.getDate() - daysToMonday);
+        setStartDate(startOfWeek.toISOString().split("T")[0]);
+        setEndDate(today.toISOString().split("T")[0]);
+        break;
+      case "lastWeek":
+        const currentDayOfWeek = today.getDay();
+        // Calculate days to subtract to get to Monday of current week
+        const daysToCurrentMonday =
+          currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
+
+        // Get Monday of current week
+        const currentMonday = new Date(today);
+        currentMonday.setDate(today.getDate() - daysToCurrentMonday);
+
+        // Get Monday of last week (7 days before current Monday)
+        const lastWeekMonday = new Date(currentMonday);
+        lastWeekMonday.setDate(currentMonday.getDate() - 7);
+
+        // Get Sunday of last week (6 days after last Monday)
+        const lastWeekSunday = new Date(lastWeekMonday);
+        lastWeekSunday.setDate(lastWeekMonday.getDate() + 6);
+
+        setStartDate(lastWeekMonday.toISOString().split("T")[0]);
+        setEndDate(lastWeekSunday.toISOString().split("T")[0]);
+        break;
+      case "thisMonth":
+        const firstDayOfMonth = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          2,
+        );
+        setStartDate(firstDayOfMonth.toISOString().split("T")[0]);
+        setEndDate(today.toISOString().split("T")[0]);
+        break;
+      case "lastMonth":
+        const firstDayOfLastMonth = new Date(
+          today.getFullYear(),
+          today.getMonth() - 1,
+          1,
+        );
+        const lastDayOfLastMonth = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          0,
+        );
+
+        firstDayOfLastMonth.setHours(12);
+        lastDayOfLastMonth.setHours(12);
+
+        setStartDate(firstDayOfLastMonth.toISOString().split("T")[0]);
+        setEndDate(lastDayOfLastMonth.toISOString().split("T")[0]);
+        break;
+      case "thisQuarter":
+        const currentQuarter = Math.floor(today.getMonth() / 3);
+        const firstDayOfQuarter = new Date(
+          today.getFullYear(),
+          currentQuarter * 3,
+          2,
+        );
+        setStartDate(firstDayOfQuarter.toISOString().split("T")[0]);
+        setEndDate(today.toISOString().split("T")[0]);
+        break;
+      case "thisYear":
+        const firstDayOfYear = new Date(today.getFullYear(), 0, 2);
+        setStartDate(firstDayOfYear.toISOString().split("T")[0]);
+        setEndDate(today.toISOString().split("T")[0]);
+        break;
+      case "custom":
+        // Do nothing - user can use date inputs if needed
+        break;
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      // Map translation language codes to locale codes
+      const localeMap = {
+        ko: "ko-KR",
+        en: "en-US",
+        vi: "vi-VN",
+      };
+
+      const locale = localeMap[currentLanguage] || "ko-KR";
+
+      return new Date(dateStr).toLocaleDateString(locale, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return dateStr || "";
+    }
+  };
+
   const [storeFilter, setStoreFilter] = useState("all");
 
   // Fetch store settings list
@@ -150,19 +280,19 @@ export function SpendingReport() {
     });
 
   // Fetch orders for revenue calculation
-    const { data: orders = [], refetch: refetchOrders } = useQuery({
-      queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range", startDate, endDate, storeFilter],
-      queryFn: async () => {
-        const params = new URLSearchParams();
-        if (storeFilter !== "all") params.append("storeFilter", storeFilter);
-  
-        const response = await fetch(
-          `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range/${startDate}/${endDate}/all?${params.toString()}`,
-        );
-        if (!response.ok) throw new Error("Failed to fetch orders");
-        return response.json();
-      },
-    });
+  const { data: orders = [], refetch: refetchOrders } = useQuery({
+    queryKey: ["https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range", startDate, endDate, storeFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (storeFilter !== "all") params.append("storeFilter", storeFilter);
+
+      const response = await fetch(
+        `https://c4a08644-6f82-4c21-bf98-8d382f0008d1-00-2q0r6kl8z7wo.pike.replit.dev/api/orders/date-range/${startDate}/${endDate}/all?${params.toString()}`,
+      );
+      if (!response.ok) throw new Error("Failed to fetch orders");
+      return response.json();
+    },
+  });
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -543,21 +673,188 @@ export function SpendingReport() {
                 </SelectContent>
               </Select>
             </div>
+            {/* Quick Date Range Filter */}
             <div>
-              <Label>{t("reports.startDate")}</Label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>{t("reports.endDate")}</Label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
+              <Label className="text-sm font-bold text-gray-800 mb-1 block">
+                {t("common.dateRange")}
+              </Label>
+              <div className="flex gap-2">
+                <Select value={dateRange} onValueChange={handleDateRangeChange}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue>
+                      {dateRange === "custom"
+                        ? t("reports.custom")
+                        : dateRange === "today"
+                          ? t("reports.toDay")
+                          : dateRange === "yesterday"
+                            ? t("reports.yesterday")
+                            : dateRange === "thisWeek"
+                              ? t("reports.thisWeek")
+                              : dateRange === "lastWeek"
+                                ? t("reports.lastWeek")
+                                : dateRange === "thisMonth"
+                                  ? t("reports.thisMonth")
+                                  : dateRange === "lastMonth"
+                                    ? t("reports.lastMonth")
+                                    : dateRange === "thisQuarter"
+                                      ? t("reports.thisQuarter")
+                                      : dateRange === "thisYear"
+                                        ? t("reports.thisYear")
+                                        : t("common.dateRange")}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="today">{t("reports.toDay")}</SelectItem>
+                    <SelectItem value="yesterday">
+                      {t("reports.yesterday")}
+                    </SelectItem>
+                    <SelectItem value="thisWeek">
+                      {t("reports.thisWeek")}
+                    </SelectItem>
+                    <SelectItem value="lastWeek">
+                      {t("reports.lastWeek")}
+                    </SelectItem>
+                    <SelectItem value="thisMonth">
+                      {t("reports.thisMonth")}
+                    </SelectItem>
+                    <SelectItem value="lastMonth">
+                      {t("reports.lastMonth")}
+                    </SelectItem>
+                    <SelectItem value="thisQuarter">
+                      {t("reports.thisQuarter")}
+                    </SelectItem>
+                    <SelectItem value="thisYear">
+                      {t("reports.thisYear")}
+                    </SelectItem>
+                    <SelectItem value="custom">
+                      {t("reports.custom")}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {dateRange === "custom" && (
+                  <Popover
+                    open={isCalendarOpen}
+                    onOpenChange={setIsCalendarOpen}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="whitespace-nowrap"
+                        onClick={() => setIsCalendarOpen(true)}
+                      >
+                        <Calendar className="w-4 h-4 mr-2" />
+                        {formatDate(startDate)} - {formatDate(endDate)}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-auto p-0"
+                      align="start"
+                      side="bottom"
+                      sideOffset={5}
+                    >
+                      <div className="p-4">
+                        <div className="text-sm font-medium mb-4">
+                          Từ ngày: {formatDate(startDate)} - Đến ngày:{" "}
+                          {formatDate(endDate)}
+                        </div>
+                        <div className="flex gap-4">
+                          <div>
+                            <p className="text-xs text-gray-500 mb-2">
+                              Từ ngày
+                            </p>
+                            <CalendarComponent
+                              mode="single"
+                              selected={
+                                startDate
+                                  ? new Date(startDate + "T00:00:00")
+                                  : undefined
+                              }
+                              onSelect={(date) => {
+                                if (date) {
+                                  const year = date.getFullYear();
+                                  const month = String(
+                                    date.getMonth() + 1,
+                                  ).padStart(2, "0");
+                                  const day = String(date.getDate()).padStart(
+                                    2,
+                                    "0",
+                                  );
+                                  const newStartDate = `${year}-${month}-${day}`;
+                                  setStartDate(newStartDate);
+                                  if (newStartDate > endDate) {
+                                    setEndDate(newStartDate);
+                                  }
+                                }
+                              }}
+                              initialFocus
+                            />
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 mb-2">
+                              Đến ngày
+                            </p>
+                            <CalendarComponent
+                              mode="single"
+                              selected={
+                                endDate
+                                  ? new Date(endDate + "T00:00:00")
+                                  : undefined
+                              }
+                              onSelect={(date) => {
+                                if (date) {
+                                  const year = date.getFullYear();
+                                  const month = String(
+                                    date.getMonth() + 1,
+                                  ).padStart(2, "0");
+                                  const day = String(date.getDate()).padStart(
+                                    2,
+                                    "0",
+                                  );
+                                  const newEndDate = `${year}-${month}-${day}`;
+                                  if (newEndDate >= startDate) {
+                                    setEndDate(newEndDate);
+                                  }
+                                }
+                              }}
+                              disabled={(date) => {
+                                if (!startDate) return false;
+                                const compareDate = new Date(
+                                  startDate + "T00:00:00",
+                                );
+                                compareDate.setHours(0, 0, 0, 0);
+                                const checkDate = new Date(date);
+                                checkDate.setHours(0, 0, 0, 0);
+                                return checkDate < compareDate;
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setIsCalendarOpen(false);
+                              setDateRange("thisMonth");
+                              handleDateRangeChange("thisMonth");
+                            }}
+                          >
+                            Hủy
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => setIsCalendarOpen(false)}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            Xác nhận
+                          </Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>

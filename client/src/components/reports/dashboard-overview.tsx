@@ -20,10 +20,24 @@ import {
   Target,
   Search,
   RefreshCw,
+  Calendar,
 } from "lucide-react";
 import type { Order, Table as TableType } from "@shared/schema";
 import { useTranslation } from "@/lib/i18n";
 import { apiRequest } from "@/lib/queryClient";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 
 export function formatDateToYYYYMMDD(date: Date | string | number): string {
   const d = new Date(date); // Ensure input is a Date
@@ -59,12 +73,113 @@ interface Invoice {
 export function DashboardOverview() {
   const { t, currentLanguage } = useTranslation();
 
-  const [startDate, setStartDate] = useState<string>(
-    new Date().toISOString().split("T")[0],
-  );
-  const [endDate, setEndDate] = useState<string>(
-    new Date().toISOString().split("T")[0],
-  );
+  const [startDate, setStartDate] = useState(() => {
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    return firstDayOfMonth.toISOString().split("T")[0];
+  });
+  const [endDate, setEndDate] = useState(() => {
+    return new Date().toISOString().split("T")[0];
+  });
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [dateRange, setDateRange] = useState("today"); // "today", "thisWeek", "thisMonth", "lastMonth", "custom"
+
+  // Handle date range change
+  const handleDateRangeChange = (value: string) => {
+    setDateRange(value);
+    const today = new Date();
+
+    switch (value) {
+      case "today":
+        setStartDate(today.toISOString().split("T")[0]);
+        setEndDate(today.toISOString().split("T")[0]);
+        break;
+      case "yesterday":
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        setStartDate(yesterday.toISOString().split("T")[0]);
+        setEndDate(yesterday.toISOString().split("T")[0]);
+        break;
+      case "thisWeek":
+        const startOfWeek = new Date(today);
+        // Get day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+        const dayOfWeek = today.getDay();
+        // Calculate days to subtract to get to Monday (day 1)
+        // If Sunday (0), go back 6 days; otherwise go back (dayOfWeek - 1) days
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        startOfWeek.setDate(today.getDate() - daysToMonday);
+        setStartDate(startOfWeek.toISOString().split("T")[0]);
+        setEndDate(today.toISOString().split("T")[0]);
+        break;
+      case "lastWeek":
+        const currentDayOfWeek = today.getDay();
+        // Calculate days to subtract to get to Monday of current week
+        const daysToCurrentMonday =
+          currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
+
+        // Get Monday of current week
+        const currentMonday = new Date(today);
+        currentMonday.setDate(today.getDate() - daysToCurrentMonday);
+
+        // Get Monday of last week (7 days before current Monday)
+        const lastWeekMonday = new Date(currentMonday);
+        lastWeekMonday.setDate(currentMonday.getDate() - 7);
+
+        // Get Sunday of last week (6 days after last Monday)
+        const lastWeekSunday = new Date(lastWeekMonday);
+        lastWeekSunday.setDate(lastWeekMonday.getDate() + 6);
+
+        setStartDate(lastWeekMonday.toISOString().split("T")[0]);
+        setEndDate(lastWeekSunday.toISOString().split("T")[0]);
+        break;
+      case "thisMonth":
+        const firstDayOfMonth = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          2,
+        );
+        setStartDate(firstDayOfMonth.toISOString().split("T")[0]);
+        setEndDate(today.toISOString().split("T")[0]);
+        break;
+      case "lastMonth":
+        const firstDayOfLastMonth = new Date(
+          today.getFullYear(),
+          today.getMonth() - 1,
+          1,
+        );
+        const lastDayOfLastMonth = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          0,
+        );
+
+        firstDayOfLastMonth.setHours(12);
+        lastDayOfLastMonth.setHours(12);
+
+        setStartDate(firstDayOfLastMonth.toISOString().split("T")[0]);
+        setEndDate(lastDayOfLastMonth.toISOString().split("T")[0]);
+        break;
+      case "thisQuarter":
+        const currentQuarter = Math.floor(today.getMonth() / 3);
+        const firstDayOfQuarter = new Date(
+          today.getFullYear(),
+          currentQuarter * 3,
+          2,
+        );
+        setStartDate(firstDayOfQuarter.toISOString().split("T")[0]);
+        setEndDate(today.toISOString().split("T")[0]);
+        break;
+      case "thisYear":
+        const firstDayOfYear = new Date(today.getFullYear(), 0, 2);
+        setStartDate(firstDayOfYear.toISOString().split("T")[0]);
+        setEndDate(today.toISOString().split("T")[0]);
+        break;
+      case "custom":
+        // Do nothing - user can use date inputs if needed
+        break;
+    }
+  };
+
   const [storeFilter, setStoreFilter] = useState("all");
   const queryClient = useQueryClient();
 
@@ -79,7 +194,9 @@ export function DashboardOverview() {
         }
         const data = await response.json();
         // Filter out stores with typeUser = 1
-        return Array.isArray(data) ? data.filter((store: any) => store.typeUser !== 1) : [];
+        return Array.isArray(data)
+          ? data.filter((store: any) => store.typeUser !== 1)
+          : [];
       } catch (error) {
         console.error("Error fetching stores:", error);
         return [];
@@ -191,7 +308,9 @@ export function DashboardOverview() {
 
       // Apply store filter
       if (storeFilter !== "all") {
-        validOrders = validOrders.filter((order: any) => order.storeCode === storeFilter);
+        validOrders = validOrders.filter(
+          (order: any) => order.storeCode === storeFilter,
+        );
       }
 
       const validOrderItems = Array.isArray(orderItems) ? orderItems : [];
@@ -238,7 +357,7 @@ export function DashboardOverview() {
           const discount = Number(order.discount || 0); // Giảm giá từ database
           const tax = Number(order.tax || 0); // Thuế từ database
           const priceIncludeTax = order.priceIncludeTax === true; // Kiểm tra giá đã bao gồm thuế
-          
+
           let salesRevenue = 0;
           if (priceIncludeTax) {
             // Nếu giá đã bao gồm thuế: Doanh số = subtotal - discount (thuế đã có trong subtotal)
@@ -247,7 +366,7 @@ export function DashboardOverview() {
             // Nếu giá chưa bao gồm thuế: Doanh số = subtotal - discount + tax
             salesRevenue = subtotal - discount + tax;
           }
-          
+
           console.log(
             `Processing order ${order.orderNumber}: subtotal=${subtotal}, discount=${discount}, tax=${tax}, priceIncludeTax=${priceIncludeTax}, salesRevenue=${salesRevenue}`,
           );
@@ -479,16 +598,15 @@ export function DashboardOverview() {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Label htmlFor="store-filter">
-                {t("reports.storeLabel")}
-              </Label>
+              <Label htmlFor="store-filter">{t("reports.storeLabel")}</Label>
               <select
                 id="store-filter"
                 value={storeFilter}
                 onChange={(e) => setStoreFilter(e.target.value)}
                 className="h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                {storesData.filter((store: any) => store.typeUser !== 1).length > 1 && (
+                {storesData.filter((store: any) => store.typeUser !== 1)
+                  .length > 1 && (
                   <option value="all">{t("reports.all")}</option>
                 )}
                 {storesData
@@ -499,24 +617,195 @@ export function DashboardOverview() {
                     </option>
                   ))}
               </select>
-              <Label htmlFor="start-date-picker">
-                {t("reports.startDate")}:
-              </Label>
-              <Input
-                id="start-date-picker"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-auto"
-              />
-              <Label htmlFor="end-date-picker">{t("reports.endDate")}:</Label>
-              <Input
-                id="end-date-picker"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-auto"
-              />
+
+              {/* Quick Date Range Filter */}
+              <div className="relative">
+                {/* <Label className="text-sm font-bold text-gray-800 mb-3 block">
+                  {t("common.dateRange")}
+                </Label> */}
+                <div className="flex gap-2">
+                  <Select
+                    value={dateRange}
+                    onValueChange={handleDateRangeChange}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue>
+                        {dateRange === "custom"
+                          ? t("reports.custom")
+                          : dateRange === "today"
+                            ? t("reports.toDay")
+                            : dateRange === "yesterday"
+                              ? t("reports.yesterday")
+                              : dateRange === "thisWeek"
+                                ? t("reports.thisWeek")
+                                : dateRange === "lastWeek"
+                                  ? t("reports.lastWeek")
+                                  : dateRange === "thisMonth"
+                                    ? t("reports.thisMonth")
+                                    : dateRange === "lastMonth"
+                                      ? t("reports.lastMonth")
+                                      : dateRange === "thisQuarter"
+                                        ? t("reports.thisQuarter")
+                                        : dateRange === "thisYear"
+                                          ? t("reports.thisYear")
+                                          : t("common.dateRange")}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="today">
+                        {t("reports.toDay")}
+                      </SelectItem>
+                      <SelectItem value="yesterday">
+                        {t("reports.yesterday")}
+                      </SelectItem>
+                      <SelectItem value="thisWeek">
+                        {t("reports.thisWeek")}
+                      </SelectItem>
+                      <SelectItem value="lastWeek">
+                        {t("reports.lastWeek")}
+                      </SelectItem>
+                      <SelectItem value="thisMonth">
+                        {t("reports.thisMonth")}
+                      </SelectItem>
+                      <SelectItem value="lastMonth">
+                        {t("reports.lastMonth")}
+                      </SelectItem>
+                      <SelectItem value="thisQuarter">
+                        {t("reports.thisQuarter")}
+                      </SelectItem>
+                      <SelectItem value="thisYear">
+                        {t("reports.thisYear")}
+                      </SelectItem>
+                      <SelectItem value="custom">
+                        {t("reports.custom")}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {dateRange === "custom" && (
+                    <Popover
+                      open={isCalendarOpen}
+                      onOpenChange={setIsCalendarOpen}
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="whitespace-nowrap"
+                          onClick={() => setIsCalendarOpen(true)}
+                        >
+                          <Calendar className="w-4 h-4 mr-2" />
+                          {formatDate(startDate)} - {formatDate(endDate)}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-auto p-0"
+                        align="start"
+                        side="bottom"
+                        sideOffset={5}
+                      >
+                        <div className="p-4">
+                          <div className="text-sm font-medium mb-4">
+                            Từ ngày: {formatDate(startDate)} - Đến ngày:{" "}
+                            {formatDate(endDate)}
+                          </div>
+                          <div className="flex gap-4">
+                            <div>
+                              <p className="text-xs text-gray-500 mb-2">
+                                Từ ngày
+                              </p>
+                              <CalendarComponent
+                                mode="single"
+                                selected={
+                                  startDate
+                                    ? new Date(startDate + "T00:00:00")
+                                    : undefined
+                                }
+                                onSelect={(date) => {
+                                  if (date) {
+                                    const year = date.getFullYear();
+                                    const month = String(
+                                      date.getMonth() + 1,
+                                    ).padStart(2, "0");
+                                    const day = String(date.getDate()).padStart(
+                                      2,
+                                      "0",
+                                    );
+                                    const newStartDate = `${year}-${month}-${day}`;
+                                    setStartDate(newStartDate);
+                                    if (newStartDate > endDate) {
+                                      setEndDate(newStartDate);
+                                    }
+                                  }
+                                }}
+                                initialFocus
+                              />
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 mb-2">
+                                Đến ngày
+                              </p>
+                              <CalendarComponent
+                                mode="single"
+                                selected={
+                                  endDate
+                                    ? new Date(endDate + "T00:00:00")
+                                    : undefined
+                                }
+                                onSelect={(date) => {
+                                  if (date) {
+                                    const year = date.getFullYear();
+                                    const month = String(
+                                      date.getMonth() + 1,
+                                    ).padStart(2, "0");
+                                    const day = String(date.getDate()).padStart(
+                                      2,
+                                      "0",
+                                    );
+                                    const newEndDate = `${year}-${month}-${day}`;
+                                    if (newEndDate >= startDate) {
+                                      setEndDate(newEndDate);
+                                    }
+                                  }
+                                }}
+                                disabled={(date) => {
+                                  if (!startDate) return false;
+                                  const compareDate = new Date(
+                                    startDate + "T00:00:00",
+                                  );
+                                  compareDate.setHours(0, 0, 0, 0);
+                                  const checkDate = new Date(date);
+                                  checkDate.setHours(0, 0, 0, 0);
+                                  return checkDate < compareDate;
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setIsCalendarOpen(false);
+                                setDateRange("thisMonth");
+                                handleDateRangeChange("thisMonth");
+                              }}
+                            >
+                              Hủy
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => setIsCalendarOpen(false)}
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              Xác nhận
+                            </Button>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </CardHeader>

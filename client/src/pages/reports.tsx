@@ -73,6 +73,7 @@ import { EInvoiceSettingsContent } from "@/components/settings/einvoice-settings
 import { PrinterSettingsContent } from "@/components/settings/printer-settings-content";
 import { PaymentMethodsSettingsContent } from "@/components/settings/payment-methods-settings-content";
 import { GeneralSettingsContent } from "@/components/settings/general-settings-content";
+import { PromotionManagementContent } from "@/components/settings/promotion-management-content";
 
 interface ReportsPageProps {
   onLogout?: () => void;
@@ -150,7 +151,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
     "products",
   );
   const [settingsSubTab, setSettingsSubTab] = useState<
-    "store" | "users" | "einvoice" | "printer" | "payment" | "general" | "change-history"
+    "store" | "users" | "einvoice" | "printer" | "payment" | "general" | "change-history" | "promotions"
   >("store");
   const [storeFilter, setStoreFilter] = useState<string>("all");
   const [quickRange, setQuickRange] = useState<string>("");
@@ -1508,6 +1509,33 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                       Nhật ký thay đổi
                     </span>
                   </button>
+                  <button
+                    onClick={() => setSettingsSubTab("promotions")}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
+                      settingsSubTab === "promotions"
+                        ? "bg-green-100 text-green-700"
+                        : "hover:bg-gray-100 text-gray-700"
+                    }`}
+                    data-testid="button-promotions-menu"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-5 h-5 flex-shrink-0"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                      <path d="M2 17l10 5 10-5" />
+                      <path d="M2 12l10 5 10-5" />
+                    </svg>
+                    <span className="font-medium whitespace-nowrap">
+                      Quản lý khuyến mãi
+                    </span>
+                  </button>
                 </div>
 
                 {/* Right Content Area */}
@@ -1526,6 +1554,9 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                     <ErrorBoundary>
                       <ChangeHistoryReport />
                     </ErrorBoundary>
+                  )}
+                  {settingsSubTab === "promotions" && (
+                    <PromotionManagementContent />
                   )}
                 </div>
               </div>

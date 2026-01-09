@@ -108,14 +108,16 @@ export function ChangeHistoryReport() {
 
   const filteredHistory = useMemo(() => {
     if (!Array.isArray(changeHistory)) return [];
-    
+
     // Filter by order number if provided
     if (orderNumberFilter.trim()) {
-      return changeHistory.filter((item: any) => 
-        item.orderNumber?.toLowerCase().includes(orderNumberFilter.toLowerCase())
+      return changeHistory.filter((item: any) =>
+        item.orderNumber
+          ?.toLowerCase()
+          .includes(orderNumberFilter.toLowerCase()),
       );
     }
-    
+
     return changeHistory;
   }, [changeHistory, orderNumberFilter]);
 
@@ -304,29 +306,35 @@ export function ChangeHistoryReport() {
                               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                             />
                           </svg>
-                          <p className="font-medium">Không có dữ liệu thay đổi</p>
-                          <p className="text-sm">Thử thay đổi bộ lọc hoặc khoảng thời gian</p>
+                          <p className="font-medium">
+                            Không có dữ liệu thay đổi
+                          </p>
+                          <p className="text-sm">
+                            Thử thay đổi bộ lọc hoặc khoảng thời gian
+                          </p>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : (
                     paginatedHistory.map((item: any, index: number) => {
                       try {
-                        const actionLabel = item.action === "update"
-                          ? "Cập nhật"
-                          : item.action === "create"
-                            ? "Tạo mới"
-                            : item.action === "delete"
-                              ? "Hủy đơn"
-                              : "Cập nhật";
-                        
-                        const actionColor = item.action === "update"
-                          ? "bg-blue-100 text-blue-700"
-                          : item.action === "create"
-                            ? "bg-green-100 text-green-700"
-                            : item.action === "delete"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-purple-100 text-purple-700";
+                        const actionLabel =
+                          item.action === "update"
+                            ? "Cập nhật"
+                            : item.action === "create"
+                              ? "Tạo mới"
+                              : item.action === "delete"
+                                ? "Hủy đơn"
+                                : "Cập nhật";
+
+                        const actionColor =
+                          item.action === "update"
+                            ? "bg-blue-100 text-blue-700"
+                            : item.action === "create"
+                              ? "bg-green-100 text-green-700"
+                              : item.action === "delete"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-purple-100 text-purple-700";
 
                         return (
                           <TableRow
@@ -342,10 +350,14 @@ export function ChangeHistoryReport() {
                                 : "-"}
                             </TableCell>
                             <TableCell className="text-sm text-gray-700">
-                              <div className="font-medium">{item.storeName || item.storeCode}</div>
+                              <div className="font-medium">
+                                {item.storeName || item.storeCode}
+                              </div>
                             </TableCell>
                             <TableCell className="text-sm">
-                              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${actionColor}`}>
+                              <span
+                                className={`px-3 py-1 rounded-full text-xs font-semibold ${actionColor}`}
+                              >
                                 {actionLabel}
                               </span>
                             </TableCell>
@@ -382,7 +394,9 @@ export function ChangeHistoryReport() {
               {/* Top row: Page size selector and summary */}
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-700 font-medium">Hiển thị</span>
+                  <span className="text-sm text-gray-700 font-medium">
+                    Hiển thị
+                  </span>
                   <Select
                     value={itemsPerPage.toString()}
                     onValueChange={(value) => {
@@ -401,7 +415,9 @@ export function ChangeHistoryReport() {
                       <SelectItem value="100">100</SelectItem>
                     </SelectContent>
                   </Select>
-                  <span className="text-sm text-gray-700 font-medium">bản ghi</span>
+                  <span className="text-sm text-gray-700 font-medium">
+                    bản ghi
+                  </span>
                 </div>
 
                 <div className="text-sm text-gray-700 font-medium">
@@ -432,7 +448,7 @@ export function ChangeHistoryReport() {
                 >
                   Đầu
                 </Button>
-                
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -442,7 +458,7 @@ export function ChangeHistoryReport() {
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                
+
                 <div className="flex items-center gap-1">
                   {Array.from({ length: totalPages }, (_, i) => i + 1)
                     .filter((page) => {
@@ -456,7 +472,9 @@ export function ChangeHistoryReport() {
                     .map((page, index, array) => (
                       <div key={page} className="flex items-center gap-1">
                         {index > 0 && array[index - 1] !== page - 1 && (
-                          <span className="text-gray-400 px-1 text-sm">...</span>
+                          <span className="text-gray-400 px-1 text-sm">
+                            ...
+                          </span>
                         )}
                         <Button
                           variant={currentPage === page ? "default" : "outline"}
@@ -473,7 +491,7 @@ export function ChangeHistoryReport() {
                       </div>
                     ))}
                 </div>
-                
+
                 <Button
                   variant="outline"
                   size="sm"
