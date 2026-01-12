@@ -1509,7 +1509,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                       Nhật ký thay đổi
                     </span>
                   </button>
-                  <button
+                  {/* <button
                     onClick={() => setSettingsSubTab("promotions")}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
                       settingsSubTab === "promotions"
@@ -1535,7 +1535,7 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                     <span className="font-medium whitespace-nowrap">
                       Quản lý khuyến mãi
                     </span>
-                  </button>
+                  </button> */}
                 </div>
 
                 {/* Right Content Area */}
@@ -1555,9 +1555,9 @@ export default function ReportsPage({ onLogout }: ReportsPageProps) {
                       <ChangeHistoryReport />
                     </ErrorBoundary>
                   )}
-                  {settingsSubTab === "promotions" && (
+                  {/* {settingsSubTab === "promotions" && (
                     <PromotionManagementContent />
-                  )}
+                  )} */}
                 </div>
               </div>
             </TabsContent>
